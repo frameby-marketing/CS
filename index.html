@@ -1,6 +1,9 @@
 <script src="https://frameby-marketing.github.io/Dashboard_Hub/nav.js"></script>
 
 
+<script src="https://frameby-marketing.github.io/Dashboard_Hub/nav.js"></script>
+
+
 <!DOCTYPE html>
 <html lang="ko" data-theme="dark">
 <head>
@@ -43,6 +46,11 @@
     padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;}
   .section-title{font-size:14px;color:var(--text);margin:32px 0 10px;font-weight:600;}
   .section-sub{font-size:12px;color:var(--text-secondary);margin:-6px 0 12px;}
+  .range-toolbar{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap;}
+  .range-btn{font-size:12px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);
+    background:var(--card);color:var(--text-secondary);cursor:pointer;}
+  .range-btn:hover{background:var(--card-2);color:var(--text);}
+  .range-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
   .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
   .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
   .kpi-label{font-size:12px;color:var(--text-secondary);margin:0 0 6px;}
@@ -75,7 +83,7 @@
 <div class="wrap">
   <header>
     <div class="headline">
-      <h1>CS 대시보드</h1>
+      <h1>물류 대시보드</h1>
       <span class="meta" id="lastUpdated">불러오는 중...</span>
     </div>
     <div class="toolbar">
@@ -103,11 +111,16 @@
 
   <div class="section-title">판매/출고 개요 (2026-01-05 ~ 최신 확정일)</div>
   <div class="section-sub">"(출고확인)" 탭이 있는 날짜만 집계 · 상반기/하반기 시트 통합 · 그 외 탭(코드명, 쿠팡송장 등) 제외</div>
+  <div class="range-toolbar" id="rangeToolbar">
+    <button class="range-btn" data-days="7">최근 7일</button>
+    <button class="range-btn" data-days="14">최근 14일</button>
+    <button class="range-btn" data-days="30">최근 30일</button>
+  </div>
   <div class="kpi-grid" id="salesKpiGrid"></div>
 
   <div class="grid-2">
     <div>
-      <div class="section-title">일자별 출고 추이</div>
+      <div class="section-title">월별 출고 추이</div>
       <div class="card"><canvas id="salesTrendChart"></canvas></div>
     </div>
     <div>
@@ -116,19 +129,17 @@
     </div>
   </div>
 
-  <div class="grid-2">
-    <div>
-      <div class="section-title">상품별 출고 TOP 10</div>
-      <div class="card" id="productBars"></div>
-    </div>
-    <div>
-      <div class="section-title">주문상태별 현황</div>
-      <div class="card">
-        <table id="orderStatusTable">
-          <thead><tr><th>주문상태</th><th class="num">건수</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <div>
+    <div class="section-title">상품별 출고 TOP 10</div>
+    <div class="card" id="productBars"></div>
+  </div>
+  <div>
+    <div class="section-title">주문상태별 현황</div>
+    <div class="card">
+      <table id="orderStatusTable">
+        <thead><tr><th>주문상태</th><th class="num">건수</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 
@@ -490,7 +501,8 @@ function initTheme() {
 document.getElementById('themeToggle').addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme');
   applyTheme(current === 'dark' ? 'light' : 'dark');
-  if (lastSalesData) renderSalesCharts(lastSalesData);
+  if (lastSalesData) renderPlatformChart(lastSalesData);
+  if (lastRawSalesData) renderMonthlyTrendChart(aggregateMonthlyTrend(lastRawSalesData));
   if (lastShippingData) renderShippingChart(lastShippingData);
 });
 initTheme();
@@ -606,6 +618,26 @@ async function fetchAllSalesData() {
   return { rows: allRows, validDays: allValidDays };
 }
 
+// 플랫폼명 정규화: 네이버/자사/M몰/쿠팡 4개로만 묶고, 여기에 해당하지 않는
+// 플랫폼(기타 오픈마켓 등)은 플랫폼별 비중 집계에서 제외한다.
+function normalizePlatform(name) {
+  const s = (name || '');
+  if (/네이버/.test(s)) return '네이버';
+  if (/쿠팡/.test(s)) return '쿠팡';
+  if (/m\s*몰|엠몰/i.test(s)) return 'M몰';
+  if (/자사/.test(s)) return '자사';
+  return null;
+}
+
+// 주문상태 정규화: 누락출고/누락재출고/누락재배송 등 "누락" 계열은 모두
+// 하나의 상태("누락출고")로 묶어서 보기 편하게 만든다.
+function normalizeOrderStatus(status) {
+  const s = (status || '').replace(/\s+/g, '');
+  if (!s) return '(미상)';
+  if (/누락/.test(s)) return '누락출고';
+  return status.trim();
+}
+
 function aggregateSales(data) {
   const { rows, validDays } = data;
   const byDate = {};
@@ -619,12 +651,15 @@ function aggregateSales(data) {
     byDate[r.confirmDate].count += 1;
     byDate[r.confirmDate].qty += r.qty;
 
-    byPlatform[r.platform] = (byPlatform[r.platform] || 0) + r.qty;
+    const platformKey = normalizePlatform(r.platform);
+    if (platformKey) {
+      byPlatform[platformKey] = (byPlatform[platformKey] || 0) + r.qty;
+    }
 
     const skuKey = r.sku || r.item.slice(0, 20) || '(미상)';
     bySku[skuKey] = (bySku[skuKey] || 0) + r.qty;
 
-    const statusKey = r.orderStatus || '(미상)';
+    const statusKey = normalizeOrderStatus(r.orderStatus);
     byStatus[statusKey] = (byStatus[statusKey] || 0) + 1;
 
     totalQty += r.qty;
@@ -641,17 +676,37 @@ function aggregateSales(data) {
     byPlatform,
     bySku,
     byStatus,
-    validDays: validDays.sort(),
+    validDays: Array.from(new Set(validDays)).sort(),
   };
 }
 
+// 최근 N일(유효 집계일 기준) 필터
+function filterRowsByRecentDays(rawData, days) {
+  const sortedDays = Array.from(new Set(rawData.validDays)).sort();
+  const recentDays = new Set(sortedDays.slice(-days));
+  const rows = rawData.rows.filter(r => recentDays.has(r.confirmDate));
+  return { rows, validDays: sortedDays.slice(-days) };
+}
+
+// 월별 출고 추이(전체 기간 기준, 최근 N일 필터와 무관)
+function aggregateMonthlyTrend(rawData) {
+  const byMonth = {};
+  rawData.rows.forEach(r => {
+    const month = '2026-' + r.confirmDate.slice(0, 2);
+    byMonth[month] = (byMonth[month] || 0) + 1;
+  });
+  return Object.keys(byMonth).sort().map(month => ({ month, count: byMonth[month] }));
+}
+
 let lastSalesData = null;
+let lastRawSalesData = null;
+let selectedRangeDays = 7;
 
 function renderSalesKpis(agg) {
   const cards = [
     { label: '확정출고 건수', value: agg.totalOrders.toLocaleString('ko-KR'), sub: agg.dayCount + '일 집계' },
     { label: '총 출고 수량', value: agg.totalQty.toLocaleString('ko-KR'), sub: '' },
-    { label: '집계된 확정일 수', value: agg.dayCount + '일', sub: '0105 ~ 최신' },
+    { label: '집계된 확정일 수', value: agg.dayCount + '일', sub: '최근 ' + selectedRangeDays + '일 기준' },
     { label: '이슈 건수', value: agg.issueCount.toLocaleString('ko-KR'), sub: '누락/반품/환불 포함' },
   ];
   document.getElementById('salesKpiGrid').innerHTML = cards.map(c => `
@@ -664,29 +719,54 @@ function renderSalesKpis(agg) {
 
 let salesTrendChartInstance, platformChartInstance;
 
-function renderSalesCharts(agg) {
-  const colors = themeColors();
-  const dates = agg.validDays;
-  const counts = dates.map(d => agg.byDate[d].count);
+// 값 위에 %(또는 지정한 접미사) 라벨을 찍어주는 경량 플러그인
+function makePointLabelPlugin(suffix) {
+  return {
+    id: 'pointLabelPlugin',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.data.datasets.forEach((dataset, i) => {
+        const meta = chart.getDatasetMeta(i);
+        if (meta.hidden || dataset.type === 'bar') return;
+        meta.data.forEach((point, idx) => {
+          const value = dataset.data[idx];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.fillStyle = dataset.borderColor || '#e5e7eb';
+          ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(value + (suffix || ''), point.x, point.y - 8);
+          ctx.restore();
+        });
+      });
+    },
+  };
+}
 
+function renderMonthlyTrendChart(monthlyArr) {
+  const colors = themeColors();
   const trendCtx = document.getElementById('salesTrendChart');
   if (salesTrendChartInstance) salesTrendChartInstance.destroy();
   salesTrendChartInstance = new Chart(trendCtx, {
-    type: 'line',
+    type: 'bar',
     data: {
-      labels: dates,
-      datasets: [{ label: '출고 건수', data: counts, borderColor: '#60a5fa', backgroundColor: '#60a5fa22', fill: true, tension: 0.25, pointRadius: 2 }],
+      labels: monthlyArr.map(m => m.month),
+      datasets: [{ label: '출고 건수', data: monthlyArr.map(m => m.count), backgroundColor: '#60a5fa' }],
     },
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
       scales: {
         y: { beginAtZero: true, ticks: { color: colors.text, precision: 0 }, grid: { color: colors.grid } },
-        x: { ticks: { color: colors.text, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { display: false } },
+        x: { ticks: { color: colors.text }, grid: { display: false } },
       },
     },
   });
+}
 
+function renderPlatformChart(agg) {
+  const colors = themeColors();
   const platformEntries = Object.entries(agg.byPlatform).sort((a, b) => b[1] - a[1]);
   const platformCtx = document.getElementById('platformChart');
   if (platformChartInstance) platformChartInstance.destroy();
@@ -694,7 +774,7 @@ function renderSalesCharts(agg) {
     type: 'doughnut',
     data: {
       labels: platformEntries.map(e => e[0]),
-      datasets: [{ data: platformEntries.map(e => e[1]), backgroundColor: ['#3b82f6', '#f59e0b', '#a78bfa', '#4ade80', '#f87171'] }],
+      datasets: [{ data: platformEntries.map(e => e[1]), backgroundColor: ['#3b82f6', '#f59e0b', '#a78bfa', '#4ade80'] }],
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } } },
   });
@@ -778,24 +858,25 @@ function renderShippingChart(monthly) {
   const ctx = document.getElementById('shippingTrendChart');
   if (shippingChartInstance) shippingChartInstance.destroy();
   shippingChartInstance = new Chart(ctx, {
+    type: 'line',
     data: {
       labels: monthly.map(m => m.month),
       datasets: [
-        { type: 'bar', label: '택배건수', data: monthly.map(m => m.count), backgroundColor: '#3b82f680', yAxisID: 'y' },
-        { type: 'line', label: '누락률(%)', data: monthly.map(m => +(m.missingRate * 100).toFixed(2)), borderColor: '#f87171', yAxisID: 'y1', tension: 0.2 },
-        { type: 'line', label: '오배송률(%)', data: monthly.map(m => +(m.wrongRate * 100).toFixed(2)), borderColor: '#f59e0b', yAxisID: 'y1', tension: 0.2 },
-        { type: 'line', label: '반품률(%)', data: monthly.map(m => +(m.returnsRate * 100).toFixed(2)), borderColor: '#a78bfa', yAxisID: 'y1', tension: 0.2 },
+        { label: '누락률(%)', data: monthly.map(m => +(m.missingRate * 100).toFixed(2)), borderColor: '#f87171', backgroundColor: '#f8717122', tension: 0.2 },
+        { label: '오배송률(%)', data: monthly.map(m => +(m.wrongRate * 100).toFixed(2)), borderColor: '#f59e0b', backgroundColor: '#f59e0b22', tension: 0.2 },
+        { label: '반품률(%)', data: monthly.map(m => +(m.returnsRate * 100).toFixed(2)), borderColor: '#a78bfa', backgroundColor: '#a78bfa22', tension: 0.2 },
       ],
     },
     options: {
       responsive: true,
+      layout: { padding: { top: 24 } },
       plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } },
       scales: {
-        y: { beginAtZero: true, position: 'left', ticks: { color: colors.text }, grid: { color: colors.grid } },
-        y1: { beginAtZero: true, position: 'right', ticks: { color: colors.text, callback: v => v + '%' }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: colors.text, callback: v => v + '%' }, grid: { color: colors.grid } },
         x: { ticks: { color: colors.text }, grid: { display: false } },
       },
     },
+    plugins: [makePointLabelPlugin('%')],
   });
 }
 
@@ -818,6 +899,26 @@ function renderShippingTable(monthly) {
 // ------------------------------------------------------------------
 // 메인 로드
 // ------------------------------------------------------------------
+function applyRangeFilterAndRender() {
+  if (!lastRawSalesData) return;
+  const filtered = filterRowsByRecentDays(lastRawSalesData, selectedRangeDays);
+  const agg = aggregateSales(filtered);
+  lastSalesData = agg;
+  renderSalesKpis(agg);
+  renderPlatformChart(agg);
+  renderProductBars(agg);
+  renderOrderStatusTable(agg);
+}
+
+document.querySelectorAll('.range-btn').forEach(btn => {
+  if (Number(btn.dataset.days) === selectedRangeDays) btn.classList.add('active');
+  btn.addEventListener('click', () => {
+    selectedRangeDays = Number(btn.dataset.days);
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b === btn));
+    applyRangeFilterAndRender();
+  });
+});
+
 async function loadAll() {
   document.getElementById('lastUpdated').textContent = '불러오는 중...';
   showBanner(null);
@@ -827,12 +928,9 @@ async function loadAll() {
       fetchShippingMaster(),
     ]);
 
-    const salesAgg = aggregateSales(salesRaw);
-    lastSalesData = salesAgg;
-    renderSalesKpis(salesAgg);
-    renderSalesCharts(salesAgg);
-    renderProductBars(salesAgg);
-    renderOrderStatusTable(salesAgg);
+    lastRawSalesData = salesRaw;
+    applyRangeFilterAndRender();
+    renderMonthlyTrendChart(aggregateMonthlyTrend(salesRaw));
 
     const shippingMonthly = aggregateShippingByMonth(shippingRaw);
     lastShippingData = shippingMonthly;
