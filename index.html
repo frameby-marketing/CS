@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root,
+  [data-theme="dark"]{
+    --bg:#0f1115; --card:#1a1d24; --card-2:#20242c; --border:#2b2f38;
+    --text:#e5e7eb; --text-secondary:#9aa0ab; --text-muted:#6b7280;
+    --accent:#3b82f6; --danger:#f87171; --danger-bg:#3a1f22; --success:#4ade80; --success-bg:#16261c;
+  }
+  [data-theme="light"]{
+    --bg:#f5f6f8; --card:#ffffff; --card-2:#f9fafb; --border:#e5e7eb;
+    --text:#111827; --text-secondary:#6b7280; --text-muted:#9ca3af;
+    --accent:#2563eb; --danger:#dc2626; --danger-bg:#fef2f2; --success:#16a34a; --success-bg:#f0fdf4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);transition:background .15s,color .15s;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Pretendard,Arial,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 60px;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+  h1{font-size:20px;font-weight:600;margin:0;}
+  .headline{display:flex;align-items:center;gap:10px;}
+  .meta{font-size:12px;color:var(--text-secondary);}
+  .toolbar{display:flex;align-items:center;gap:8px;}
+  .icon-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
+    border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;color:var(--text);}
+  .icon-btn:hover{background:var(--card-2);}
+  .icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;}
+  .text-btn{display:flex;align-items:center;gap:6px;font-size:13px;padding:0 12px;height:34px;
+    border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;color:var(--text);
+    text-decoration:none;}
+  .text-btn:hover{background:var(--card-2);}
+  .text-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;}
+  .banner{display:none;background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger);
+    padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;}
+  .section-title{font-size:13px;color:var(--text-secondary);margin:28px 0 10px;font-weight:500;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;}
+  .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .kpi-label{font-size:12px;color:var(--text-secondary);margin:0 0 6px;}
+  .kpi-value{font-size:22px;font-weight:600;margin:0;}
+  .grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+  @media (max-width:720px){.grid-2{grid-template-columns:1fr;} header{align-items:flex-start;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--text-secondary);font-weight:500;font-size:12px;
+    padding:6px 8px;border-bottom:1px solid var(--border);}
+  td{padding:7px 8px;border-bottom:1px solid var(--card-2);}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;}
+  .badge-danger{background:var(--danger-bg);color:var(--danger);}
+  .badge-ok{background:var(--success-bg);color:var(--success);}
+  .empty{color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center;}
+  canvas{max-height:220px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="headline">
+      <h1>CS 대시보드</h1>
+      <span class="meta" id="lastUpdated">불러오는 중...</span>
+    </div>
+    <div class="toolbar">
+      <button class="icon-btn" id="themeToggle" aria-label="다크/라이트 모드 전환" title="다크/라이트 모드 전환"></button>
+      <a class="text-btn" id="sheetLinkBtn" href="#" target="_blank" rel="noopener" title="스프레드시트 열기">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+        시트 바로가기
+      </a>
+      <button class="text-btn" id="refreshBtn" title="새로고침">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+        새로고침
+      </button>
+    </div>
+  </header>
+
+  <div class="banner" id="configBanner"></div>
+
+  <div class="section-title">오늘의 CS 현황</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="grid-2">
+    <div>
+      <div class="section-title">최근 14일 상담 추이</div>
+      <div class="card"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div>
+      <div class="section-title">상담 상태 분포</div>
+      <div class="card"><canvas id="stateChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-title">담당자별 처리 (오늘)</div>
+  <div class="card">
+    <table id="managerTable">
+      <thead><tr><th>담당자</th><th>처리건수</th><th>평균 응답(분)</th><th>평균 해결(분)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">미처리 상담 (실시간)</div>
+  <div class="card">
+    <table id="liveTable">
+      <thead><tr><th>고객명</th><th>담당자</th><th>상태</th><th>응답여부</th><th>대기(분)</th><th>태그</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ------------------------------------------------------------------
+// CONFIG: 이 스프레드시트(cs_dashboard_O전용) 기준으로 자동 채워둔 값.
+// 시트 ID가 바뀌면 SHEET_ID만 교체하면 됨.
+// gviz CSV 경로가 브라우저 fetch에서 CORS로 막히면, 구글시트에서
+// [파일 > 공유 > 웹에 게시]로 각 탭을 CSV로 게시한 뒤 그 URL로 교체하세요.
+// ------------------------------------------------------------------
+const SHEET_ID = '181Ooiep6eyNix5ozgzGhfN7Gtq_LuvAsYOX_FkMeSO0';
+function csvUrl(sheetName) {
+  return 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheetName);
+}
+const CONFIG = {
+  kpiCsvUrl: csvUrl('01_일별현황'),
+  managerCsvUrl: csvUrl('02_담당자별처리'),
+  trendCsvUrl: csvUrl('03_일별상담추이'),
+  stateCsvUrl: csvUrl('04_상담상태분포'),
+  liveCsvUrl: csvUrl('Live_미처리상담'),
+  sheetUrl: 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit',
+  refreshIntervalMinutes: 5,
+};
+
+document.getElementById('sheetLinkBtn').href = CONFIG.sheetUrl;
+
+// ------------------------------------------------------------------
+// 다크/라이트 모드
+// ------------------------------------------------------------------
+const ICON_MOON = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>';
+const ICON_SUN = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  btn.innerHTML = theme === 'dark' ? ICON_SUN : ICON_MOON;
+  btn.title = theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환';
+  localStorage.setItem('cs-dashboard-theme', theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('cs-dashboard-theme');
+  applyTheme(saved === 'light' ? 'light' : 'dark'); // 기본값 다크
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  if (lastData) renderCharts(lastData.trend, lastData.state); // 차트 색상 재적용
+});
+
+initTheme();
+
+// ------------------------------------------------------------------
+// 데이터 로드 & 렌더
+// ------------------------------------------------------------------
+function fetchCsv(url) {
+  return new Promise((resolve, reject) => {
+    if (!url) { reject(new Error('URL 없음')); return; }
+    Papa.parse(url, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => resolve(res.data),
+      error: (err) => reject(err),
+    });
+  });
+}
+
+function showBanner(msg) {
+  const el = document.getElementById('configBanner');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function renderKpis(rows) {
+  const map = {};
+  rows.forEach(r => { map[r['항목']] = r['값']; });
+  const order = ['오늘 문의', '미응답', '미처리 문의', '오늘 처리완료',
+    '평균 응답시간(분)', '평균 해결시간(분)', '진행중(opened)', '보류(snoozed)'];
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = order.map(label => `
+    <div class="kpi-card">
+      <p class="kpi-label">${label}</p>
+      <p class="kpi-value">${map[label] !== undefined && map[label] !== '' ? map[label] : '-'}</p>
+    </div>`).join('');
+}
+
+let trendChartInstance, stateChartInstance;
+let lastData = null;
+
+function themeColors() {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    text: styles.getPropertyValue('--text-secondary').trim(),
+    grid: styles.getPropertyValue('--border').trim(),
+  };
+}
+
+function renderCharts(trendRows, stateRows) {
+  const colors = themeColors();
+
+  const labels = trendRows.map(r => (r['날짜'] || '').slice(5));
+  const newCounts = trendRows.map(r => Number(r['신규 문의']) || 0);
+  const closedCounts = trendRows.map(r => Number(r['종료 처리']) || 0);
+  const trendCtx = document.getElementById('trendChart');
+  if (trendChartInstance) trendChartInstance.destroy();
+  trendChartInstance = new Chart(trendCtx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '신규 문의', data: newCounts, backgroundColor: '#60a5fa' },
+        { label: '종료 처리', data: closedCounts, backgroundColor: '#2563eb' },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: colors.text, precision: 0 }, grid: { color: colors.grid } },
+        x: { ticks: { color: colors.text }, grid: { color: colors.grid } },
+      },
+    },
+  });
+
+  const stateLabels = stateRows.map(r => r['상태']);
+  const stateValues = stateRows.map(r => Number(r['건수']) || 0);
+  const stateCtx = document.getElementById('stateChart');
+  if (stateChartInstance) stateChartInstance.destroy();
+  stateChartInstance = new Chart(stateCtx, {
+    type: 'doughnut',
+    data: {
+      labels: stateLabels,
+      datasets: [{ data: stateValues, backgroundColor: ['#f59e0b', '#a78bfa', '#4ade80'] }],
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } } },
+  });
+}
+
+function renderManagers(rows) {
+  const tbody = document.querySelector('#managerTable tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r['담당매니저'] || ''}</td>
+      <td>${r['오늘 처리건수'] || 0}</td>
+      <td>${r['평균 응답시간(분)'] || '-'}</td>
+      <td>${r['평균 해결시간(분)'] || '-'}</td>
+    </tr>`).join('');
+}
+
+function renderLive(rows) {
+  const tbody = document.querySelector('#liveTable tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">현재 미처리 상담 없음</td></tr>'; return; }
+  const sorted = rows.slice().sort((a, b) => (Number(b['대기시간(분)']) || 0) - (Number(a['대기시간(분)']) || 0));
+  tbody.innerHTML = sorted.slice(0, 30).map(r => {
+    const unanswered = r['응답여부'] === '미응답';
+    return `
+    <tr>
+      <td>${r['고객명'] || ''}</td>
+      <td>${r['담당매니저'] || ''}</td>
+      <td>${r['state'] || ''}</td>
+      <td><span class="badge ${unanswered ? 'badge-danger' : 'badge-ok'}">${r['응답여부'] || ''}</span></td>
+      <td>${r['대기시간(분)'] || ''}</td>
+      <td>${r['tags'] || ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadAll() {
+  const anyEmpty = !CONFIG.kpiCsvUrl || !CONFIG.managerCsvUrl || !CONFIG.trendCsvUrl || !CONFIG.stateCsvUrl || !CONFIG.liveCsvUrl;
+  if (anyEmpty) {
+    showBanner('CONFIG의 CSV URL이 비어있어요.');
+    document.getElementById('lastUpdated').textContent = 'CONFIG 미설정';
+    return;
+  }
+  try {
+    const [kpi, mgr, trend, state, live] = await Promise.all([
+      fetchCsv(CONFIG.kpiCsvUrl),
+      fetchCsv(CONFIG.managerCsvUrl),
+      fetchCsv(CONFIG.trendCsvUrl),
+      fetchCsv(CONFIG.stateCsvUrl),
+      fetchCsv(CONFIG.liveCsvUrl),
+    ]);
+    lastData = { kpi, mgr, trend, state, live };
+    renderKpis(kpi);
+    renderManagers(mgr);
+    renderCharts(trend, state);
+    renderLive(live);
+    showBanner(null);
+    document.getElementById('lastUpdated').textContent = '마지막 갱신 ' + new Date().toLocaleTimeString('ko-KR');
+  } catch (e) {
+    document.getElementById('lastUpdated').textContent = '불러오기 실패';
+    showBanner('데이터를 불러오지 못했습니다 (' + e.message + '). 구글시트가 "링크가 있는 모든 사용자" 이상으로 공유돼 있는지, 혹은 "웹에 게시" CSV URL로 교체가 필요한지 확인해주세요.');
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadAll);
+loadAll();
+if (CONFIG.refreshIntervalMinutes > 0) {
+  setInterval(loadAll, CONFIG.refreshIntervalMinutes * 60 * 1000);
+}
+</script>
+</body>
+</html>
