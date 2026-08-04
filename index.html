@@ -129,8 +129,12 @@
   </div>
 
   <div>
-    <div class="section-title">상품별 출고 TOP 10</div>
+    <div class="section-title">제품별 출고 TOP 10</div>
     <div class="card" id="productBars"></div>
+  </div>
+  <div>
+    <div class="section-title">제품별 교환 TOP 5</div>
+    <div class="card" id="exchangeBars"></div>
   </div>
   <div>
     <div class="section-title">주문상태별 현황</div>
@@ -142,20 +146,24 @@
     </div>
   </div>
 
-  <div class="section-title">배송현황 - 월별 택배건수 대비 오류율 (2026.01 ~ 2026.07)</div>
+  <div class="section-title">배송현황 - 월별 택배건수 대비 비율 (2026.01 ~ 2026.07)</div>
   <div class="range-toolbar" id="shippingMetricToolbar">
-    <button class="range-btn" data-metric="missing">누락률</button>
-    <button class="range-btn" data-metric="wrong">오배송률</button>
-    <button class="range-btn" data-metric="returns">반품률</button>
+    <button class="range-btn" data-metric="exchange">교환율</button>
+    <button class="range-btn" data-metric="missing">누락율</button>
+    <button class="range-btn" data-metric="wrong">오배송율</button>
+    <button class="range-btn" data-metric="returns">반품율</button>
   </div>
-  <div class="card"><canvas id="shippingTrendChart"></canvas></div>
+  <div class="card">
+    <canvas id="shippingTrendChart"></canvas>
+    <div class="empty" id="shippingChartEmpty" style="display:none;">배송현황 스프레드시트에는 교환 관련 컬럼이 없어 집계할 수 없습니다. 시트에 교환 건수 컬럼을 추가해주시면 반영할게요.</div>
+  </div>
 
   <div class="section-title">배송현황 월별 상세</div>
   <div class="card">
     <table id="shippingTable">
       <thead><tr>
         <th>월</th><th class="num">택배건수</th><th class="num">누락</th><th class="num">오배송</th><th class="num">반품</th>
-        <th class="num">누락률</th><th class="num">오배송률</th><th class="num">반품률</th>
+        <th class="num">누락율</th><th class="num">오배송율</th><th class="num">반품율</th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -653,6 +661,7 @@ function aggregateSales(data) {
   const byDate = {};
   const byPlatform = {};
   const bySku = {};
+  const byExchangeSku = {};
   const byStatus = {};
   let totalQty = 0;
 
@@ -672,6 +681,10 @@ function aggregateSales(data) {
     const statusKey = normalizeOrderStatus(r.orderStatus);
     byStatus[statusKey] = (byStatus[statusKey] || 0) + 1;
 
+    if (statusKey === '교환') {
+      byExchangeSku[skuKey] = (byExchangeSku[skuKey] || 0) + r.qty;
+    }
+
     totalQty += r.qty;
   });
 
@@ -685,6 +698,7 @@ function aggregateSales(data) {
     byDate,
     byPlatform,
     bySku,
+    byExchangeSku,
     byStatus,
     validDays: Array.from(new Set(validDays)).sort(),
   };
@@ -824,17 +838,21 @@ function productFamilyLabel(rawLabel) {
   return null;
 }
 
-function renderProductBars(agg) {
+// sku -> qty 맵을 제품별 출고 TOP10과 동일한 이름 축약/통합 규칙으로 합친다
+function mergeBySkuLabel(bySkuMap) {
   const merged = {};
-  Object.entries(agg.bySku).forEach(([sku, qty]) => {
+  Object.entries(bySkuMap).forEach(([sku, qty]) => {
     const rawLabel = SKU_MAP[sku] || sku;
     const key = productFamilyLabel(rawLabel) || skuLabel(sku);
     merged[key] = (merged[key] || 0) + qty;
   });
+  return merged;
+}
 
-  const top = Object.entries(merged).sort((a, b) => b[1] - a[1]).slice(0, 10);
+function renderBarList(elId, merged, limit) {
+  const top = Object.entries(merged).sort((a, b) => b[1] - a[1]).slice(0, limit);
   const max = top.length ? top[0][1] : 1;
-  const el = document.getElementById('productBars');
+  const el = document.getElementById(elId);
   if (!top.length) { el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   el.innerHTML = top.map(([label, qty]) => `
     <div class="bar-row">
@@ -842,6 +860,14 @@ function renderProductBars(agg) {
       <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, qty / max * 100)}%"></div></div>
       <span class="bar-value">${qty.toLocaleString('ko-KR')}</span>
     </div>`).join('');
+}
+
+function renderProductBars(agg) {
+  renderBarList('productBars', mergeBySkuLabel(agg.bySku), 10);
+}
+
+function renderExchangeBars(agg) {
+  renderBarList('exchangeBars', mergeBySkuLabel(agg.byExchangeSku), 5);
 }
 
 function renderOrderStatusTable(agg) {
@@ -897,17 +923,29 @@ let lastShippingData = null;
 let shippingChartInstance;
 let selectedShippingMetric = 'missing';
 const SHIPPING_METRIC_CONFIG = {
-  missing: { key: 'missingRate', label: '누락률(%)', color: '#f87171' },
-  wrong: { key: 'wrongRate', label: '오배송률(%)', color: '#f59e0b' },
-  returns: { key: 'returnsRate', label: '반품률(%)', color: '#a78bfa' },
+  exchange: { key: null, label: '교환율(%)', color: '#38bdf8' }, // 배송현황 시트에 교환 데이터가 없어 표시 불가
+  missing: { key: 'missingRate', label: '누락율(%)', color: '#f87171' },
+  wrong: { key: 'wrongRate', label: '오배송율(%)', color: '#f59e0b' },
+  returns: { key: 'returnsRate', label: '반품율(%)', color: '#a78bfa' },
 };
 
 function renderShippingChart(monthly) {
-  const colors = themeColors();
-  const ctx = document.getElementById('shippingTrendChart');
-  if (shippingChartInstance) shippingChartInstance.destroy();
+  const canvas = document.getElementById('shippingTrendChart');
+  const emptyEl = document.getElementById('shippingChartEmpty');
   const cfg = SHIPPING_METRIC_CONFIG[selectedShippingMetric];
-  shippingChartInstance = new Chart(ctx, {
+
+  if (!cfg.key) {
+    if (shippingChartInstance) { shippingChartInstance.destroy(); shippingChartInstance = null; }
+    canvas.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = '';
+  emptyEl.style.display = 'none';
+
+  const colors = themeColors();
+  if (shippingChartInstance) shippingChartInstance.destroy();
+  shippingChartInstance = new Chart(canvas, {
     type: 'line',
     data: {
       labels: monthly.map(m => m.month),
@@ -987,6 +1025,7 @@ function applyRangeFilterAndRender() {
   renderSalesKpis(agg);
   renderPlatformChart(agg);
   renderProductBars(agg);
+  renderExchangeBars(agg);
   renderOrderStatusTable(agg);
 }
 
