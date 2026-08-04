@@ -597,7 +597,7 @@ async function fetchSalesRange(spreadsheetId, startStr, endStr) {
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     dates.push(new Date(d));
   }
-  const perDay = await mapLimit(dates, 6, (d) => fetchOneSalesDay(spreadsheetId, d));
+  const perDay = await mapLimit(dates, 10, (d) => fetchOneSalesDay(spreadsheetId, d));
   const validDays = [];
   let allRows = [];
   perDay.forEach((rows, i) => {
@@ -956,6 +956,29 @@ function renderShippingTable(monthly) {
 // ------------------------------------------------------------------
 // 메인 로드
 // ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// 로딩 속도 개선: 판매내역은 날짜별 시트 탭을 하나씩 요청하는 구조라
+// (2026-01-05 ~ 오늘, 2개 스프레드시트) 매번 200개 넘는 요청을 새로
+// 보내야 해서 느리다. localStorage에 마지막으로 불러온 데이터를 캐시해두고,
+// 재방문 시에는 캐시를 즉시 보여준 뒤 백그라운드에서 최신 데이터로
+// 조용히 갱신한다(stale-while-revalidate) — 첫 로딩 외에는 체감 속도가
+// 크게 빨라진다.
+// ------------------------------------------------------------------
+const CACHE_KEY = 'cs-dashboard-cache-v1';
+
+function saveCache(salesRaw, shippingRaw) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), salesRaw, shippingRaw }));
+  } catch (e) {}
+}
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
 function applyRangeFilterAndRender() {
   if (!lastRawSalesData) return;
   const filtered = filterRowsByRecentDays(lastRawSalesData, selectedRangeDays);
@@ -976,8 +999,27 @@ document.querySelectorAll('#rangeToolbar .range-btn').forEach(btn => {
   });
 });
 
-async function loadAll() {
-  document.getElementById('lastUpdated').textContent = '불러오는 중...';
+function renderFromRaw(salesRaw, shippingRaw) {
+  lastRawSalesData = salesRaw;
+  applyRangeFilterAndRender();
+  renderMonthlyTrendChart(aggregateMonthlyTrend(salesRaw));
+
+  const shippingMonthly = aggregateShippingByMonth(shippingRaw);
+  lastShippingData = shippingMonthly;
+  renderShippingChart(shippingMonthly);
+  renderShippingTable(shippingMonthly);
+}
+
+async function loadAll(forceRefresh) {
+  const cached = !forceRefresh ? loadCache() : null;
+  if (cached) {
+    // 캐시를 먼저 즉시 표시 (체감 로딩시간 단축), 최신 데이터는 아래서 백그라운드로 이어서 불러온다
+    renderFromRaw(cached.salesRaw, cached.shippingRaw);
+    const ageMin = Math.max(0, Math.round((Date.now() - cached.savedAt) / 60000));
+    document.getElementById('lastUpdated').textContent = '캐시된 데이터 (' + ageMin + '분 전) · 최신 데이터 불러오는 중...';
+  } else {
+    document.getElementById('lastUpdated').textContent = '불러오는 중...';
+  }
   showBanner(null);
   try {
     const [salesRaw, shippingRaw] = await Promise.all([
@@ -985,24 +1027,22 @@ async function loadAll() {
       fetchShippingMaster(),
     ]);
 
-    lastRawSalesData = salesRaw;
-    applyRangeFilterAndRender();
-    renderMonthlyTrendChart(aggregateMonthlyTrend(salesRaw));
-
-    const shippingMonthly = aggregateShippingByMonth(shippingRaw);
-    lastShippingData = shippingMonthly;
-    renderShippingChart(shippingMonthly);
-    renderShippingTable(shippingMonthly);
+    renderFromRaw(salesRaw, shippingRaw);
+    saveCache(salesRaw, shippingRaw);
 
     document.getElementById('lastUpdated').textContent = '마지막 갱신 ' + new Date().toLocaleTimeString('ko-KR');
   } catch (e) {
-    document.getElementById('lastUpdated').textContent = '불러오기 실패';
-    showBanner('데이터를 불러오지 못했습니다 (' + e.message + '). 두 스프레드시트가 "링크가 있는 모든 사용자" 이상으로 공유돼 있는지 확인해주세요.');
+    if (cached) {
+      document.getElementById('lastUpdated').textContent = '캐시된 데이터 표시 중 (최신 데이터를 불러오지 못했습니다)';
+    } else {
+      document.getElementById('lastUpdated').textContent = '불러오기 실패';
+      showBanner('데이터를 불러오지 못했습니다 (' + e.message + '). 두 스프레드시트가 "링크가 있는 모든 사용자" 이상으로 공유돼 있는지 확인해주세요.');
+    }
   }
 }
 
-document.getElementById('refreshBtn').addEventListener('click', loadAll);
-loadAll();
+document.getElementById('refreshBtn').addEventListener('click', () => loadAll(true));
+loadAll(false);
 </script>
 </body>
 </html>
