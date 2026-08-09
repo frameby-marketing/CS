@@ -117,25 +117,35 @@
   </div>
   <div class="kpi-grid" id="salesKpiGrid"></div>
 
+  <div class="section-title">월별 출고 추이</div>
+  <div class="card"><canvas id="salesTrendChart"></canvas></div>
+
+  <div class="section-title">제품별 출고 TOP 5</div>
+  <div class="range-toolbar" id="shipTopRangeToolbar">
+    <button class="range-btn" data-days="7">최근 7일</button>
+    <button class="range-btn" data-days="14">최근 14일</button>
+    <button class="range-btn active" data-days="30">최근 30일</button>
+    <button class="range-btn" data-days="90">최근 90일</button>
+    <button class="range-btn" data-days="365">최근 1년</button>
+  </div>
   <div class="grid-2">
-    <div>
-      <div class="section-title">월별 출고 추이</div>
-      <div class="card"><canvas id="salesTrendChart"></canvas></div>
-    </div>
-    <div>
-      <div class="section-title">플랫폼별 비중</div>
-      <div class="card"><canvas id="platformChart"></canvas></div>
-    </div>
+    <div class="card" id="productBars"></div>
+    <div class="card"><canvas id="shipTopPie"></canvas></div>
   </div>
 
-  <div>
-    <div class="section-title">제품별 출고 TOP 10</div>
-    <div class="card" id="productBars"></div>
+  <div class="section-title">제품별 교환 TOP 5</div>
+  <div class="range-toolbar" id="exchTopRangeToolbar">
+    <button class="range-btn" data-days="7">최근 7일</button>
+    <button class="range-btn" data-days="14">최근 14일</button>
+    <button class="range-btn active" data-days="30">최근 30일</button>
+    <button class="range-btn" data-days="90">최근 90일</button>
+    <button class="range-btn" data-days="365">최근 1년</button>
   </div>
-  <div>
-    <div class="section-title">제품별 교환 TOP 5</div>
+  <div class="grid-2">
     <div class="card" id="exchangeBars"></div>
+    <div class="card"><canvas id="exchTopPie"></canvas></div>
   </div>
+
   <div>
     <div class="section-title">주문상태별 현황</div>
     <div class="card">
@@ -148,14 +158,12 @@
 
   <div class="section-title">배송현황 - 월별 택배건수 대비 비율 (2026.01 ~ 2026.07)</div>
   <div class="range-toolbar" id="shippingMetricToolbar">
-    <button class="range-btn" data-metric="exchange">교환율</button>
     <button class="range-btn" data-metric="missing">누락율</button>
     <button class="range-btn" data-metric="wrong">오배송율</button>
     <button class="range-btn" data-metric="returns">반품율</button>
   </div>
   <div class="card">
     <canvas id="shippingTrendChart"></canvas>
-    <div class="empty" id="shippingChartEmpty" style="display:none;">배송현황 스프레드시트에는 교환 관련 컬럼이 없어 집계할 수 없습니다. 시트에 교환 건수 컬럼을 추가해주시면 반영할게요.</div>
   </div>
 
   <div class="section-title">배송현황 월별 상세</div>
@@ -513,8 +521,11 @@ function initTheme() {
 document.getElementById('themeToggle').addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme');
   applyTheme(current === 'dark' ? 'light' : 'dark');
-  if (lastSalesData) renderPlatformChart(lastSalesData);
-  if (lastRawSalesData) renderMonthlyTrendChart(aggregateMonthlyTrend(lastRawSalesData));
+  if (lastRawSalesData) {
+    renderMonthlyTrendChart(aggregateMonthlyTrend(lastRawSalesData));
+    refreshShipTop();
+    refreshExchTop();
+  }
   if (lastShippingData) renderShippingChart(lastShippingData);
 });
 initTheme();
@@ -630,16 +641,6 @@ async function fetchAllSalesData() {
   return { rows: allRows, validDays: allValidDays };
 }
 
-// 플랫폼명 정규화: 네이버/자사/M몰/쿠팡 4개로만 묶고, 여기에 해당하지 않는
-// 플랫폼(기타 오픈마켓 등)은 플랫폼별 비중 집계에서 제외한다.
-function normalizePlatform(name) {
-  const s = (name || '');
-  if (/네이버/.test(s)) return '네이버';
-  if (/m\s*몰|엠몰/i.test(s)) return 'M몰';
-  if (/자사/.test(s)) return '자사';
-  return null; // 쿠팡 및 그 외 플랫폼은 비중 차트에서 제외
-}
-
 // 주문상태 정규화: 표현만 다르고 의미가 같은 상태들을 최대한 큰 카테고리로 묶어서
 // 표에 비슷한 항목이 중복 나열되지 않도록 한다.
 function normalizeOrderStatus(status) {
@@ -659,9 +660,6 @@ function normalizeOrderStatus(status) {
 function aggregateSales(data) {
   const { rows, validDays } = data;
   const byDate = {};
-  const byPlatform = {};
-  const bySku = {};
-  const byExchangeSku = {};
   const byStatus = {};
   let totalQty = 0;
 
@@ -670,20 +668,8 @@ function aggregateSales(data) {
     byDate[r.confirmDate].count += 1;
     byDate[r.confirmDate].qty += r.qty;
 
-    const platformKey = normalizePlatform(r.platform);
-    if (platformKey) {
-      byPlatform[platformKey] = (byPlatform[platformKey] || 0) + r.qty;
-    }
-
-    const skuKey = r.sku || r.item.slice(0, 20) || '(미상)';
-    bySku[skuKey] = (bySku[skuKey] || 0) + r.qty;
-
     const statusKey = normalizeOrderStatus(r.orderStatus);
     byStatus[statusKey] = (byStatus[statusKey] || 0) + 1;
-
-    if (statusKey === '교환') {
-      byExchangeSku[skuKey] = (byExchangeSku[skuKey] || 0) + r.qty;
-    }
 
     totalQty += r.qty;
   });
@@ -696,9 +682,6 @@ function aggregateSales(data) {
     dayCount: validDays.length,
     issueCount,
     byDate,
-    byPlatform,
-    bySku,
-    byExchangeSku,
     byStatus,
     validDays: Array.from(new Set(validDays)).sort(),
   };
@@ -743,7 +726,7 @@ function renderSalesKpis(agg) {
     </div>`).join('');
 }
 
-let salesTrendChartInstance, platformChartInstance;
+let salesTrendChartInstance;
 
 // 값 위에 %(또는 지정한 접미사) 라벨을 찍어주는 경량 플러그인
 function makePointLabelPlugin(suffix) {
@@ -790,23 +773,6 @@ function renderMonthlyTrendChart(monthlyArr) {
       },
     },
     plugins: [makePointLabelPlugin('')],
-  });
-}
-
-const PLATFORM_COLORS = { '네이버': '#4ade80', '자사': '#3b82f6', 'M몰': '#9ca3af' };
-
-function renderPlatformChart(agg) {
-  const colors = themeColors();
-  const platformEntries = Object.entries(agg.byPlatform).sort((a, b) => b[1] - a[1]);
-  const platformCtx = document.getElementById('platformChart');
-  if (platformChartInstance) platformChartInstance.destroy();
-  platformChartInstance = new Chart(platformCtx, {
-    type: 'doughnut',
-    data: {
-      labels: platformEntries.map(e => e[0]),
-      datasets: [{ data: platformEntries.map(e => e[1]), backgroundColor: platformEntries.map(e => PLATFORM_COLORS[e[0]] || '#a78bfa') }],
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } } },
   });
 }
 
@@ -862,13 +828,75 @@ function renderBarList(elId, merged, limit) {
     </div>`).join('');
 }
 
-function renderProductBars(agg) {
-  renderBarList('productBars', mergeBySkuLabel(agg.bySku), 10);
+// 제품별 출고/교환 TOP5 + 원형그래프용: 지정한 "최근 N일" 구간에서 (교환만 볼지
+// 여부에 따라) 제품 라벨별 수량을 합산하고 TOP5 + 나머지(otherSum)를 반환한다.
+// filterRowsByRecentDays는 기존 전역 기간 필터와 동일한 기준(최근 N개 확정일)을
+// 재사용해 대시보드 전체의 "최근 N일" 정의를 일관되게 유지한다.
+function computeTopNBreakdown(rawData, days, onlyExchange) {
+  const filtered = filterRowsByRecentDays(rawData, days).rows;
+  const src = onlyExchange
+    ? filtered.filter(r => normalizeOrderStatus(r.orderStatus) === '교환')
+    : filtered;
+  const bySku = {};
+  let total = 0;
+  src.forEach(r => {
+    const skuKey = r.sku || r.item.slice(0, 20) || '(미상)';
+    bySku[skuKey] = (bySku[skuKey] || 0) + r.qty;
+    total += r.qty;
+  });
+  const merged = mergeBySkuLabel(bySku);
+  const sorted = Object.entries(merged).sort((a, b) => b[1] - a[1]);
+  const top5 = sorted.slice(0, 5);
+  const top5Sum = top5.reduce((s, [, v]) => s + v, 0);
+  return { top5, otherSum: Math.max(0, total - top5Sum) };
 }
 
-function renderExchangeBars(agg) {
-  renderBarList('exchangeBars', mergeBySkuLabel(agg.byExchangeSku), 5);
+const TOP5_PIE_COLORS = ['#3b82f6', '#f59e0b', '#a78bfa', '#4ade80', '#f87171', '#64748b'];
+let shipTopPieInstance, exchTopPieInstance;
+
+function renderTopPie(canvasId, prevInstance, top5, otherSum) {
+  const colors = themeColors();
+  const labels = top5.map(([label]) => label);
+  const data = top5.map(([, val]) => val);
+  if (otherSum > 0) { labels.push('기타'); data.push(otherSum); }
+  const ctx = document.getElementById(canvasId);
+  if (prevInstance) prevInstance.destroy();
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: TOP5_PIE_COLORS }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } } },
+  });
 }
+
+let shipTopDays = 30;
+let exchTopDays = 30;
+
+function refreshShipTop() {
+  if (!lastRawSalesData) return;
+  const { top5, otherSum } = computeTopNBreakdown(lastRawSalesData, shipTopDays, false);
+  renderBarList('productBars', Object.fromEntries(top5), 5);
+  shipTopPieInstance = renderTopPie('shipTopPie', shipTopPieInstance, top5, otherSum);
+}
+
+function refreshExchTop() {
+  if (!lastRawSalesData) return;
+  const { top5, otherSum } = computeTopNBreakdown(lastRawSalesData, exchTopDays, true);
+  renderBarList('exchangeBars', Object.fromEntries(top5), 5);
+  exchTopPieInstance = renderTopPie('exchTopPie', exchTopPieInstance, top5, otherSum);
+}
+
+function wireTopRangeToolbar(toolbarId, getDays, setDays, refreshFn) {
+  document.querySelectorAll('#' + toolbarId + ' .range-btn').forEach(btn => {
+    if (Number(btn.dataset.days) === getDays()) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      setDays(Number(btn.dataset.days));
+      document.querySelectorAll('#' + toolbarId + ' .range-btn').forEach(b => b.classList.toggle('active', b === btn));
+      refreshFn();
+    });
+  });
+}
+wireTopRangeToolbar('shipTopRangeToolbar', () => shipTopDays, (v) => { shipTopDays = v; }, refreshShipTop);
+wireTopRangeToolbar('exchTopRangeToolbar', () => exchTopDays, (v) => { exchTopDays = v; }, refreshExchTop);
 
 function renderOrderStatusTable(agg) {
   const tbody = document.querySelector('#orderStatusTable tbody');
@@ -923,7 +951,6 @@ let lastShippingData = null;
 let shippingChartInstance;
 let selectedShippingMetric = 'missing';
 const SHIPPING_METRIC_CONFIG = {
-  exchange: { key: null, label: '교환율(%)', color: '#38bdf8' }, // 배송현황 시트에 교환 데이터가 없어 표시 불가
   missing: { key: 'missingRate', label: '누락율(%)', color: '#f87171' },
   wrong: { key: 'wrongRate', label: '오배송율(%)', color: '#f59e0b' },
   returns: { key: 'returnsRate', label: '반품율(%)', color: '#a78bfa' },
@@ -931,18 +958,7 @@ const SHIPPING_METRIC_CONFIG = {
 
 function renderShippingChart(monthly) {
   const canvas = document.getElementById('shippingTrendChart');
-  const emptyEl = document.getElementById('shippingChartEmpty');
   const cfg = SHIPPING_METRIC_CONFIG[selectedShippingMetric];
-
-  if (!cfg.key) {
-    if (shippingChartInstance) { shippingChartInstance.destroy(); shippingChartInstance = null; }
-    canvas.style.display = 'none';
-    emptyEl.style.display = 'block';
-    return;
-  }
-  canvas.style.display = '';
-  emptyEl.style.display = 'none';
-
   const colors = themeColors();
   if (shippingChartInstance) shippingChartInstance.destroy();
   shippingChartInstance = new Chart(canvas, {
@@ -1017,15 +1033,15 @@ function loadCache() {
   } catch (e) { return null; }
 }
 
+// 상단 전역 기간 필터(#rangeToolbar)는 KPI/주문상태별 현황만 담당한다.
+// 제품별 출고/교환 TOP5는 각자의 행에 있는 별도 기간 버튼(shipTopDays/exchTopDays)으로
+// 독립적으로 제어된다 (refreshShipTop/refreshExchTop).
 function applyRangeFilterAndRender() {
   if (!lastRawSalesData) return;
   const filtered = filterRowsByRecentDays(lastRawSalesData, selectedRangeDays);
   const agg = aggregateSales(filtered);
   lastSalesData = agg;
   renderSalesKpis(agg);
-  renderPlatformChart(agg);
-  renderProductBars(agg);
-  renderExchangeBars(agg);
   renderOrderStatusTable(agg);
 }
 
@@ -1042,6 +1058,8 @@ function renderFromRaw(salesRaw, shippingRaw) {
   lastRawSalesData = salesRaw;
   applyRangeFilterAndRender();
   renderMonthlyTrendChart(aggregateMonthlyTrend(salesRaw));
+  refreshShipTop();
+  refreshExchTop();
 
   const shippingMonthly = aggregateShippingByMonth(shippingRaw);
   lastShippingData = shippingMonthly;
