@@ -124,7 +124,7 @@
   <div class="range-toolbar" id="shipTopRangeToolbar">
     <button class="range-btn" data-days="7">최근 7일</button>
     <button class="range-btn" data-days="14">최근 14일</button>
-    <button class="range-btn active" data-days="30">최근 30일</button>
+    <button class="range-btn" data-days="30">최근 30일</button>
     <button class="range-btn" data-days="90">최근 90일</button>
     <button class="range-btn" data-days="365">최근 1년</button>
   </div>
@@ -137,7 +137,7 @@
   <div class="range-toolbar" id="exchTopRangeToolbar">
     <button class="range-btn" data-days="7">최근 7일</button>
     <button class="range-btn" data-days="14">최근 14일</button>
-    <button class="range-btn active" data-days="30">최근 30일</button>
+    <button class="range-btn" data-days="30">최근 30일</button>
     <button class="range-btn" data-days="90">최근 90일</button>
     <button class="range-btn" data-days="365">최근 1년</button>
   </div>
@@ -148,6 +148,13 @@
 
   <div>
     <div class="section-title">주문상태별 현황</div>
+    <div class="range-toolbar" id="orderStatusRangeToolbar">
+      <button class="range-btn" data-days="7">최근 7일</button>
+      <button class="range-btn" data-days="14">최근 14일</button>
+      <button class="range-btn" data-days="30">최근 30일</button>
+      <button class="range-btn" data-days="90">최근 90일</button>
+      <button class="range-btn" data-days="365">최근 1년</button>
+    </div>
     <div class="card">
       <table id="orderStatusTable">
         <thead><tr><th>주문상태</th><th class="num">건수</th></tr></thead>
@@ -854,22 +861,58 @@ function computeTopNBreakdown(rawData, days, onlyExchange) {
 const TOP5_PIE_COLORS = ['#3b82f6', '#f59e0b', '#a78bfa', '#4ade80', '#f87171', '#64748b'];
 let shipTopPieInstance, exchTopPieInstance;
 
+// 파이 조각 위에 직접 "제품명 / 비율(%)"을 그려주는 플러그인.
+// 비율이 클수록 글씨를 크게, 작을수록 작게 그린다 (9~20px 사이로 보간).
+function pieSliceLabelPlugin() {
+  return {
+    id: 'pieSliceLabelPlugin',
+    afterDatasetsDraw(chart) {
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || meta.hidden) return;
+      const dataArr = chart.data.datasets[0].data;
+      const total = dataArr.reduce((s, v) => s + (Number(v) || 0), 0);
+      if (!total) return;
+      const { ctx } = chart;
+      meta.data.forEach((arc, idx) => {
+        const value = Number(dataArr[idx]) || 0;
+        if (!value) return;
+        const pct = (value / total) * 100;
+        const pos = arc.tooltipPosition ? arc.tooltipPosition() : { x: arc.x, y: arc.y };
+        const nameSize = Math.max(9, Math.min(20, 9 + (pct / 100) * 30));
+        const pctSize = Math.max(8, nameSize - 3);
+        const label = chart.data.labels[idx] || '';
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,.55)';
+        ctx.shadowBlur = 3;
+        ctx.font = '700 ' + nameSize + 'px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(label, pos.x, pos.y - nameSize * 0.62);
+        ctx.font = '600 ' + pctSize + 'px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(pct.toFixed(1) + '%', pos.x, pos.y + pctSize * 0.62);
+        ctx.restore();
+      });
+    },
+  };
+}
+
 function renderTopPie(canvasId, prevInstance, top5, otherSum) {
-  const colors = themeColors();
   const labels = top5.map(([label]) => label);
   const data = top5.map(([, val]) => val);
   if (otherSum > 0) { labels.push('기타'); data.push(otherSum); }
   const ctx = document.getElementById(canvasId);
   if (prevInstance) prevInstance.destroy();
   return new Chart(ctx, {
-    type: 'doughnut',
+    type: 'pie',
     data: { labels, datasets: [{ data, backgroundColor: TOP5_PIE_COLORS }] },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } } },
+    options: { responsive: true, plugins: { legend: { display: false } } },
+    plugins: [pieSliceLabelPlugin()],
   });
 }
 
-let shipTopDays = 30;
-let exchTopDays = 30;
+let shipTopDays = 7;
+let exchTopDays = 7;
 
 function refreshShipTop() {
   if (!lastRawSalesData) return;
@@ -906,6 +949,15 @@ function renderOrderStatusTable(agg) {
     `<tr><td>${status}</td><td class="num">${count.toLocaleString('ko-KR')}</td></tr>`
   ).join('');
 }
+
+// 주문상태별 현황도 상단 KPI 필터와 별개로, 자체 기간 버튼으로 독립 제어된다.
+let orderStatusDays = 7;
+function refreshOrderStatus() {
+  if (!lastRawSalesData) return;
+  const filtered = filterRowsByRecentDays(lastRawSalesData, orderStatusDays);
+  renderOrderStatusTable(aggregateSales(filtered));
+}
+wireTopRangeToolbar('orderStatusRangeToolbar', () => orderStatusDays, (v) => { orderStatusDays = v; }, refreshOrderStatus);
 
 // ------------------------------------------------------------------
 // 2) 배송현황 (일자,택배건수,누락,오배송,반품) 마스터 표 -> 월별 집계
@@ -1033,16 +1085,15 @@ function loadCache() {
   } catch (e) { return null; }
 }
 
-// 상단 전역 기간 필터(#rangeToolbar)는 KPI/주문상태별 현황만 담당한다.
-// 제품별 출고/교환 TOP5는 각자의 행에 있는 별도 기간 버튼(shipTopDays/exchTopDays)으로
-// 독립적으로 제어된다 (refreshShipTop/refreshExchTop).
+// 상단 전역 기간 필터(#rangeToolbar)는 KPI 카드만 담당한다.
+// 제품별 출고/교환 TOP5, 주문상태별 현황은 각자의 행에 있는 별도 기간 버튼으로
+// 독립적으로 제어된다 (refreshShipTop/refreshExchTop/refreshOrderStatus).
 function applyRangeFilterAndRender() {
   if (!lastRawSalesData) return;
   const filtered = filterRowsByRecentDays(lastRawSalesData, selectedRangeDays);
   const agg = aggregateSales(filtered);
   lastSalesData = agg;
   renderSalesKpis(agg);
-  renderOrderStatusTable(agg);
 }
 
 document.querySelectorAll('#rangeToolbar .range-btn').forEach(btn => {
@@ -1060,6 +1111,7 @@ function renderFromRaw(salesRaw, shippingRaw) {
   renderMonthlyTrendChart(aggregateMonthlyTrend(salesRaw));
   refreshShipTop();
   refreshExchTop();
+  refreshOrderStatus();
 
   const shippingMonthly = aggregateShippingByMonth(shippingRaw);
   lastShippingData = shippingMonthly;
