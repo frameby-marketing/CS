@@ -218,6 +218,9 @@ function parseDateStr(s){
 }
 function fmtDate(d){ if(!d) return "-"; const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())}`; }
 function fmtDateShort(d){ const p = n => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())}`; }
+/* 로컬 날짜 기준 키 변환 (toISOString은 UTC로 변환되어 한국(UTC+9) 등에서 하루 밀리는 버그가 있어 사용하지 않음) */
+function dateKey(d){ const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function keyToDate(k){ const [y,m,dd] = k.split("-").map(Number); return new Date(y, m-1, dd); }
 function parseRating(s){ const n = parseInt(String(s||"").replace(/[^0-9]/g,""),10); return isNaN(n) ? null : n; }
 function isImportant(s){ return !!(s && String(s).trim() !== ""); }
 function isBlank(s){ return !s || String(s).trim() === ""; }
@@ -392,13 +395,13 @@ function renderWatchlist(events){
 function renderTrend(events, maxDate){
   const wrap = document.getElementById("trendChart").closest(".chart-card");
   if(!events.length){ wrap.querySelector(".chart-wrap").innerHTML = `<div class="empty-state">표시할 데이터가 없습니다</div>`; document.getElementById("trendHint").textContent=""; return; }
-  const dayKeys = [...new Set(events.map(e => e.date.toISOString().slice(0,10)))].sort();
-  const days = dayKeys.slice(-30).map(k => new Date(k));
+  const dayKeys = [...new Set(events.map(e => dateKey(e.date)))].sort();
+  const days = dayKeys.slice(-30).map(keyToDate);
   document.getElementById("trendHint").textContent = `최근 ${days.length}일 · 리뷰/문의/상담 일별 건수`;
 
   function countFor(type, d){
-    const key = d.toISOString().slice(0,10);
-    return events.filter(e => e.type === type && e.date.toISOString().slice(0,10) === key).length;
+    const key = dateKey(d);
+    return events.filter(e => e.type === type && dateKey(e.date) === key).length;
   }
   const labels = days.map(fmtDateShort);
   const datasets = [
