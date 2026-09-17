@@ -1,1157 +1,585 @@
 <script src="https://frameby-marketing.github.io/Dashboard_Hub/nav.js"></script>
-
-
 <!DOCTYPE html>
 <html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>물류 대시보드</title>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<title>CX 통합 대시보드</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CX 대시보드">
+<meta name="theme-color" content="#12151c">
 <style>
-  :root,
-  [data-theme="dark"]{
-    --bg:#0f1115; --card:#1a1d24; --card-2:#20242c; --border:#2b2f38;
-    --text:#e5e7eb; --text-secondary:#9aa0ab; --text-muted:#6b7280;
-    --accent:#3b82f6; --danger:#f87171; --danger-bg:#3a1f22; --success:#4ade80; --success-bg:#16261c;
+  :root{
+    --bg:#0f1115; --card:#171a21; --card-border:#262b36; --text:#e8eaed; --sub:#9aa1ac;
+    --accent:#4c8dff; --accent2:#8b7bf0; --good:#3ecf8e; --bad:#ff5c6c; --warn:#ffb648;
+    --grid:#242832; --track:#262b36;
+    /* 카테고리 색(리뷰/문의/상담) - CVD 검증된 팔레트 순서 사용 */
+    --c-review:#3987e5; --c-inquiry:#d95926; --c-chat:#199e70;
   }
-  [data-theme="light"]{
-    --bg:#f5f6f8; --card:#ffffff; --card-2:#f9fafb; --border:#e5e7eb;
-    --text:#111827; --text-secondary:#6b7280; --text-muted:#9ca3af;
-    --accent:#2563eb; --danger:#dc2626; --danger-bg:#fef2f2; --success:#16a34a; --success-bg:#f0fdf4;
+  html[data-theme="light"]{
+    --bg:#f5f6f8; --card:#ffffff; --card-border:#e5e7eb; --text:#1a1d23; --sub:#6b7280;
+    --accent:#2a78d6; --accent2:#7059c9; --good:#0a8a3f; --bad:#d93a3a; --warn:#c07a00;
+    --grid:#eceef1; --track:#e8eaee;
+    --c-review:#2a78d6; --c-inquiry:#eb6834; --c-chat:#1baf7a;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);transition:background .15s,color .15s;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Pretendard,Arial,sans-serif;}
-  .wrap{max-width:1160px;margin:0 auto;padding:24px 20px 60px;}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-  h1{font-size:20px;font-weight:600;margin:0;}
-  .headline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .meta{font-size:12px;color:var(--text-secondary);}
-  .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .icon-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
-    border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;color:var(--text);}
-  .icon-btn:hover{background:var(--card-2);}
-  .icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;}
-  .text-btn{display:flex;align-items:center;gap:6px;font-size:13px;padding:0 12px;height:34px;
-    border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;color:var(--text);
-    text-decoration:none;white-space:nowrap;}
-  .text-btn:hover{background:var(--card-2);}
-  .text-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;}
-  .banner{display:none;background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger);
-    padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;}
-  .section-title{font-size:14px;color:var(--text);margin:32px 0 10px;font-weight:600;}
-  .section-sub{font-size:12px;color:var(--text-secondary);margin:-6px 0 12px;}
-  .range-toolbar{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap;}
-  .range-btn{font-size:12px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);
-    background:var(--card);color:var(--text-secondary);cursor:pointer;}
-  .range-btn:hover{background:var(--card-2);color:var(--text);}
-  .range-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
-  .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
-  .kpi-label{font-size:12px;color:var(--text-secondary);margin:0 0 6px;}
-  .kpi-value{font-size:22px;font-weight:600;margin:0;}
-  .kpi-sub{font-size:11px;color:var(--text-muted);margin:4px 0 0;}
-  .grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
-  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-  @media (max-width:820px){.grid-2,.grid-3{grid-template-columns:1fr;} header{align-items:flex-start;}}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{text-align:left;color:var(--text-secondary);font-weight:500;font-size:12px;
-    padding:6px 8px;border-bottom:1px solid var(--border);}
-  td{padding:7px 8px;border-bottom:1px solid var(--card-2);}
-  tr:last-child td{border-bottom:none;}
-  td.num, th.num{text-align:right;}
-  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;}
-  .badge-danger{background:var(--danger-bg);color:var(--danger);}
-  .badge-ok{background:var(--success-bg);color:var(--success);}
-  .empty{color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center;}
-  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-  .bar-row:last-child{margin-bottom:0;}
-  .bar-label{width:220px;font-size:12px;flex-shrink:0;white-space:normal;word-break:keep-all;}
-  .bar-track{flex:1;background:var(--card-2);border-radius:4px;height:8px;min-width:40px;}
-  .bar-fill{background:var(--accent);height:8px;border-radius:4px;}
-  .bar-value{width:70px;font-size:12px;color:var(--text-secondary);text-align:right;flex-shrink:0;}
-  canvas{max-height:260px;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Pretendard,Arial,sans-serif;background:var(--bg);color:var(--text);transition:background .15s,color .15s;}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
+  header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px;}
+  h1{font-size:20px;font-weight:700;margin:0 0 4px;}
+  .sub{color:var(--sub);font-size:12.5px;}
+  .topbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:999px;border:1px solid var(--card-border);background:var(--card);color:var(--text);font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;}
+  .btn:hover{border-color:var(--accent);}
+  .btn:disabled{opacity:.55;cursor:default;}
+  .btn.spinning .spin-icon{display:inline-block;animation:spin .8s linear infinite;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .seg-toggle{display:inline-flex;align-items:center;background:var(--track);border:1px solid var(--card-border);border-radius:999px;padding:3px;gap:2px;}
+  .seg-toggle button{display:inline-flex;align-items:center;gap:6px;border:none;background:transparent;color:var(--sub);padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .seg-toggle button.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
+  .status-pill{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:999px;border:1px solid var(--card-border);background:var(--card);color:var(--sub);font-size:12.5px;font-weight:600;white-space:nowrap;}
+  .status-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--sub);flex:none;}
+  .status-pill.live .dot{background:var(--good);box-shadow:0 0 0 3px rgba(62,207,142,.18);}
+  .status-pill.live{color:var(--good);}
+  .status-pill.err .dot{background:var(--bad);}
+  .status-pill.err{color:var(--bad);}
+  section{margin-bottom:16px;}
+  .section-title{font-size:13px;font-weight:700;color:var(--sub);margin:26px 2px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .section-title .hint{font-size:11px;font-weight:500;color:var(--sub);opacity:.75;}
+  .grid-1{display:grid;grid-template-columns:1fr;gap:14px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media(max-width:820px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:18px;}
+  .card-label{font-size:12.5px;color:var(--sub);margin-bottom:10px;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .card-value{font-size:26px;font-weight:700;line-height:1.2;}
+  .card-value .unit{font-size:13px;font-weight:600;color:var(--sub);margin-left:4px;}
+  .card-note{font-size:12px;color:var(--sub);margin-top:8px;}
+  .card-note b{color:var(--text);}
+  .card.accent-review{border-left:3px solid var(--c-review);}
+  .card.accent-inquiry{border-left:3px solid var(--c-inquiry);}
+  .card.accent-chat{border-left:3px solid var(--c-chat);}
+  .card.accent-warn{border-left:3px solid var(--bad);}
+  .progress-track{width:100%;height:8px;border-radius:99px;background:var(--track);overflow:hidden;margin-top:10px;}
+  .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .chart-card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:18px;}
+  .chart-card .ttl{font-size:13px;font-weight:700;margin-bottom:14px;}
+  .chart-wrap{position:relative;width:100%;}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:12px;color:var(--sub);}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none;}
+  .donut-card{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .donut-wrap{position:relative;width:150px;height:150px;margin-bottom:6px;}
+  .donut-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .donut-label .pct{font-size:19px;font-weight:700;}
+  .donut-label .nm{font-size:10.5px;color:var(--sub);margin-top:2px;}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;color:#fff;flex:none;white-space:nowrap;}
+  .badge.review{background:var(--c-review);}
+  .badge.inquiry{background:var(--c-inquiry);}
+  .badge.chat{background:var(--c-chat);}
+  .badge.important{background:var(--bad);}
+  .badge.lowrate{background:var(--warn);color:#1a1d23;}
+  .badge.stage{background:var(--track);color:var(--sub);}
+  .watch-list, .feed-list{display:flex;flex-direction:column;gap:0;max-height:420px;overflow-y:auto;}
+  .watch-item, .feed-item{padding:12px 4px;border-bottom:1px solid var(--card-border);}
+  .watch-item:last-child, .feed-item:last-child{border-bottom:none;}
+  .watch-item-head, .feed-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+  .watch-item-date, .feed-item-date{font-size:11.5px;color:var(--sub);}
+  .watch-item-product, .feed-item-product{font-size:12.5px;font-weight:700;}
+  .watch-item-content, .feed-item-content{font-size:12.5px;color:var(--text);line-height:1.55;white-space:pre-line;opacity:.92;}
+  .watch-item-meta{font-size:11px;color:var(--sub);margin-top:5px;}
+  .empty-state{padding:30px 10px;text-align:center;color:var(--sub);font-size:12.5px;}
+  .table-tabs{display:flex;gap:6px;margin-bottom:12px;}
+  .table-tabs button{border:1px solid var(--card-border);background:var(--track);color:var(--sub);font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;cursor:pointer;}
+  .table-tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .error-banner{background:rgba(255,92,108,.1);border:1px solid var(--bad);color:var(--bad);border-radius:12px;padding:14px 16px;font-size:12.5px;line-height:1.7;margin-bottom:18px;display:none;}
+  .error-banner b{display:block;margin-bottom:4px;font-size:13px;}
+  footer{color:var(--sub);font-size:12px;text-align:center;margin-top:34px;line-height:1.7;}
+  code{background:var(--track);padding:1px 6px;border-radius:4px;font-size:11.5px;}
+  @media(max-width:620px){.donut-wrap{width:120px;height:120px;}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="headline">
-      <h1>물류 대시보드</h1>
-      <span class="meta" id="lastUpdated">불러오는 중...</span>
+    <div>
+      <h1>CX 통합 대시보드</h1>
+      <div class="sub" id="periodLabel">데이터를 불러오는 중...</div>
     </div>
-    <div class="toolbar">
-      <button class="icon-btn" id="themeToggle" aria-label="다크/라이트 모드 전환" title="다크/라이트 모드 전환"></button>
-      <a class="text-btn" id="sheet3LinkBtn" href="#" target="_blank" rel="noopener" title="상반기 판매내역 시트 열기">
-        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
-        판매내역(상반기)
-      </a>
-      <a class="text-btn" id="sheet1LinkBtn" href="#" target="_blank" rel="noopener" title="하반기 판매내역 시트 열기">
-        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
-        판매내역(하반기)
-      </a>
-      <a class="text-btn" id="sheet2LinkBtn" href="#" target="_blank" rel="noopener" title="배송 현황 시트 열기">
-        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
-        배송현황 시트
-      </a>
-      <button class="text-btn" id="refreshBtn" title="새로고침">
-        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
-        새로고침
-      </button>
+    <div class="topbar-actions">
+      <div class="seg-toggle" id="themeSegToggle">
+        <button type="button" id="themeLightBtn" data-theme-opt="light">☀️ 라이트모드</button>
+        <button type="button" id="themeDarkBtn" data-theme-opt="dark">🌙 다크모드</button>
+      </div>
+      <div class="status-pill" id="statusBadge"><span class="dot"></span><span id="statusBadgeText">연동 확인 중</span></div>
+      <a class="btn" id="sheetLink" href="#" target="_blank" rel="noopener">↗ 스프레드시트</a>
+      <button class="btn" id="refreshBtn"><span class="spin-icon">🔄</span> 새로고침</button>
     </div>
   </header>
 
-  <div class="banner" id="configBanner"></div>
-
-  <div class="section-title">판매/출고 개요 (2026-01-05 ~ 최신 확정일)</div>
-  <div class="section-sub">"(출고확인)" 탭이 있는 날짜만 집계 · 상반기/하반기 시트 통합 · 그 외 탭(코드명, 쿠팡송장 등) 제외</div>
-  <div class="range-toolbar" id="rangeToolbar">
-    <button class="range-btn" data-days="7">최근 7일</button>
-    <button class="range-btn" data-days="14">최근 14일</button>
-    <button class="range-btn" data-days="30">최근 30일</button>
-    <button class="range-btn" data-days="90">최근 90일</button>
-    <button class="range-btn" data-days="365">최근 1년</button>
+  <div class="error-banner" id="errorBanner">
+    <b>스프레드시트 데이터를 불러오지 못했습니다.</b>
+    <span id="errorBannerMsg">시트가 "링크가 있는 모든 사용자 - 뷰어"로 공유되어 있는지 확인한 뒤 새로고침을 눌러주세요. (파일 &gt; 공유 &gt; 일반 액세스)</span>
   </div>
-  <div class="kpi-grid" id="salesKpiGrid"></div>
 
-  <div class="section-title">월별 출고 추이</div>
-  <div class="card"><canvas id="salesTrendChart"></canvas></div>
+  <div class="section-title">개요<span class="hint" id="overviewHint"></span></div>
+  <div class="grid-4" id="kpiRow"></div>
 
-  <div class="section-title">제품별 출고 TOP 5</div>
-  <div class="range-toolbar" id="shipTopRangeToolbar">
-    <button class="range-btn" data-days="7">최근 7일</button>
-    <button class="range-btn" data-days="14">최근 14일</button>
-    <button class="range-btn" data-days="30">최근 30일</button>
-    <button class="range-btn" data-days="90">최근 90일</button>
-    <button class="range-btn" data-days="365">최근 1년</button>
+  <div class="section-title">🚨 지금 확인이 필요한 항목<span class="hint">'중요' 표시 + 낮은 별점(3점 이하) 리뷰를 최신순으로 모았습니다</span></div>
+  <div class="card"><div class="watch-list" id="watchList"></div></div>
+
+  <div class="section-title">최근 인입 추이<span class="hint" id="trendHint"></span></div>
+  <div class="chart-card">
+    <div class="chart-wrap" style="height:300px;"><canvas id="trendChart" role="img" aria-label="리뷰, 문의, 상담 일별 인입 추이 선 차트">일별 인입 추이</canvas></div>
+    <div class="legend" id="trendLegend"></div>
   </div>
+
+  <div class="section-title">채널별 분포</div>
+  <div class="grid-3" id="channelRow"></div>
+
+  <div class="section-title">제품별 언급 TOP 10<span class="hint">리뷰+문의+상담 합산 건수</span></div>
+  <div class="chart-card">
+    <div class="chart-wrap" style="height:340px;"><canvas id="productChart" role="img" aria-label="제품별 언급 건수 상위 10개 막대 차트">제품별 언급 TOP 10</canvas></div>
+  </div>
+
+  <div class="section-title">리뷰 별점 · 문의/상담 진행 단계</div>
   <div class="grid-2">
-    <div class="card" id="productBars"></div>
-    <div class="card"><canvas id="shipTopPie"></canvas></div>
-  </div>
-
-  <div class="section-title">제품별 교환 TOP 5</div>
-  <div class="range-toolbar" id="exchTopRangeToolbar">
-    <button class="range-btn" data-days="7">최근 7일</button>
-    <button class="range-btn" data-days="14">최근 14일</button>
-    <button class="range-btn" data-days="30">최근 30일</button>
-    <button class="range-btn" data-days="90">최근 90일</button>
-    <button class="range-btn" data-days="365">최근 1년</button>
-  </div>
-  <div class="grid-2">
-    <div class="card" id="exchangeBars"></div>
-    <div class="card"><canvas id="exchTopPie"></canvas></div>
-  </div>
-
-  <div>
-    <div class="section-title">주문상태별 현황</div>
-    <div class="range-toolbar" id="orderStatusRangeToolbar">
-      <button class="range-btn" data-days="7">최근 7일</button>
-      <button class="range-btn" data-days="14">최근 14일</button>
-      <button class="range-btn" data-days="30">최근 30일</button>
-      <button class="range-btn" data-days="90">최근 90일</button>
-      <button class="range-btn" data-days="365">최근 1년</button>
+    <div class="chart-card">
+      <div class="ttl">별점 분포</div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="ratingChart" role="img" aria-label="리뷰 별점 분포 막대 차트">별점 분포</canvas></div>
     </div>
-    <div class="card">
-      <table id="orderStatusTable">
-        <thead><tr><th>주문상태</th><th class="num">건수</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <div class="chart-card donut-card">
+      <div class="ttl" style="align-self:flex-start;">구매 단계 분포 (문의+상담)</div>
+      <div class="donut-wrap"><canvas id="stageChart"></canvas><div class="donut-label"><div class="pct" id="stageTopPct">-</div><div class="nm" id="stageTopName">-</div></div></div>
+      <div class="legend" id="stageLegend"></div>
     </div>
   </div>
 
-  <div class="section-title">배송현황 - 월별 택배건수 대비 비율 (2026.01 ~ 2026.07)</div>
-  <div class="range-toolbar" id="shippingMetricToolbar">
-    <button class="range-btn" data-metric="missing">누락율</button>
-    <button class="range-btn" data-metric="wrong">오배송율</button>
-    <button class="range-btn" data-metric="returns">반품율</button>
+  <div class="section-title">최근 데이터</div>
+  <div class="table-tabs" id="feedTabs">
+    <button type="button" data-feed="review" class="active">리뷰</button>
+    <button type="button" data-feed="inquiry">문의</button>
+    <button type="button" data-feed="chat">상담</button>
   </div>
-  <div class="card">
-    <canvas id="shippingTrendChart"></canvas>
-  </div>
+  <div class="card"><div class="feed-list" id="feedList"></div></div>
 
-  <div class="section-title">배송현황 월별 상세</div>
-  <div class="card">
-    <table id="shippingTable">
-      <thead><tr>
-        <th>월</th><th class="num">택배건수</th><th class="num">누락</th><th class="num">오배송</th><th class="num">반품</th>
-        <th class="num">누락율</th><th class="num">오배송율</th><th class="num">반품율</th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
+  <footer>
+    이 대시보드는 연동된 구글 스프레드시트의 <code>리뷰 통합</code> · <code>고객 문의</code> · <code>채팅 상담</code> 탭 데이터를 실시간으로 집계합니다.
+    <br>탭에 새 행이 계속 누적되어도 새로고침 시 자동으로 반영됩니다. 마지막 동기화: <span id="lastSyncFooter">-</span>
+  </footer>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-// ------------------------------------------------------------------
-// CONFIG
-// ------------------------------------------------------------------
-const SHEET1_ID = '1tVyaMhFjOMRWam_zqgxDNQJypU5ENdZlxJC3GyHlVeY'; // [관리팀]2026년하반기일일판매내역
-const SHEET3_ID = '1ZrX9ITlSrgtwMhtkt80zYXVBYzcBQvcTbsChyyqWVbI'; // [관리팀]2026년상반기일일판매내역
-const SHEET2_ID = '1xABS4wito4sqt5LALz46h61z4vMurU1jrDTX4qdBImo'; // [관리팀] 배송 현황
-const SHEET2_MASTER_GID = '829054041'; // date,count,missing,wrong,returns 마스터 표
-// 판매내역 집계 대상 시트/기간 (상반기 + 하반기). end:null 은 오늘까지.
-const SALES_RANGES = [
-  { id: SHEET3_ID, start: '2026-01-05', end: '2026-06-30' },
-  { id: SHEET1_ID, start: '2026-07-01', end: null },
-];
-const SHIPPING_START_MONTH = '2026-01';
-const SHIPPING_END_MONTH = '2026-07';
+/* ================= CONFIG ================= */
+const CONFIG = {
+  spreadsheetId: "1WYH1HKKY-m0u944FZv6IvWanZOH39olsowyzBCkK2F4",
+  spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1WYH1HKKY-m0u944FZv6IvWanZOH39olsowyzBCkK2F4/edit",
+  sheets: { review: "리뷰 통합", inquiry: "고객 문의", chat: "채팅 상담" }
+};
+const REVIEW_COLS  = ["리뷰 작성일","채널","제품","별점","리뷰 내용","중요"];
+const INQUIRY_COLS = ["문의일","채널","제품","문의 내용","답변","구매 단계","중요"];
+const CHAT_COLS    = ["인입일","채널","제품","상담 내용 요약","구매 단계","중요"];
 
-function gvizCsvUrlBySheetName(spreadsheetId, sheetName) {
-  return 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheetName);
-}
-function gvizCsvUrlByGid(spreadsheetId, gid) {
-  return 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/gviz/tq?tqx=out:csv&gid=' + gid;
-}
+/* CVD 검증된 카테고리 팔레트 (dataviz 스킬 reference/palette.md 기준), 라이트/다크 모드별 */
+const CAT_PALETTE = {
+  dark:  ["#3987e5","#d95926","#199e70","#c98500","#d55181","#008300","#9085e9","#e66767"],
+  light: ["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#4a3aa7","#e34948"]
+};
+/* 별점(순서형) 시퀀셜 블루 램프 - 낮은 별점일수록 옅게, 높은 별점일수록 진하게 */
+const SEQ_BLUE = { 1:"#9ec5f4", 2:"#6da7ec", 3:"#2a78d6", 4:"#1c5cab", 5:"#0d366b" };
+const SEQ_BLUE_DARK = { 1:"#cde2fb", 2:"#86b6ef", 3:"#3987e5", 4:"#256abf", 5:"#104281" };
 
-document.getElementById('sheet1LinkBtn').href = 'https://docs.google.com/spreadsheets/d/' + SHEET1_ID + '/edit';
-document.getElementById('sheet3LinkBtn').href = 'https://docs.google.com/spreadsheets/d/' + SHEET3_ID + '/edit';
-document.getElementById('sheet2LinkBtn').href = 'https://docs.google.com/spreadsheets/d/' + SHEET2_ID + '/edit';
-
-// ------------------------------------------------------------------
-// 상품코드(SKU) -> 사람이 읽기 쉬운 이름 매핑 (사용자 제공 코드표 기준)
-// 상품별 출고 TOP10 등에서 원본 코드 대신 이 이름으로 표시한다.
-// ------------------------------------------------------------------
-const SKU_MAP = {
-  "BSC-11-DEF": "베이직 케이스 11",
-  "BSC-11프로-DEF": "베이직 케이스 11프로",
-  "BSC-11프로맥스-DEF": "베이직 케이스 11프로맥스",
-  "BSC-12미니-DEF": "베이직 케이스 12미니",
-  "BSC-12프로-DEF": "베이직 케이스 12프로",
-  "BSC-12프로맥스-DEF": "베이직 케이스 12프로맥스",
-  "BSC-13/14-DEF": "베이직 케이스 13/14",
-  "BSC-13미니-DEF": "베이직 케이스 13미니",
-  "BSC-13프로-DEF": "베이직 케이스 13프로",
-  "BSC-13프로맥스-DEF": "베이직 케이스 13프로맥스",
-  "BSC-14프로-DEF": "베이직 케이스 14프로",
-  "BSC-14프로맥스-DEF": "베이직 케이스 14프로맥스",
-  "BSC-14플러스-DEF": "베이직 케이스 14플러스",
-  "BSC-15-DEF": "베이직 케이스 15",
-  "BSC-15프로-DEF": "베이직 케이스 15프로",
-  "BSC-15프로맥스-DEF": "베이직 케이스 15프로맥스",
-  "BSC-15플러스-DEF": "베이직 케이스 15 플러스",
-  "BSC-16-DEF": "베이직 케이스 16",
-  "BSC-16E-DEF": "베이직 케이스 16E",
-  "BSC-16프로-DEF": "베이직 케이스 16프로",
-  "BSC-16프로맥스-DEF": "베이직 케이스 16프로맥스",
-  "BSC-16플러스-DEF": "베이직 케이스 16플러스",
-  "BSC-17-DEF": "베이직 케이스 17",
-  "BSC-17프로-DEF": "베이직 케이스 17프로",
-  "BSC-17프로맥스-DEF": "베이직 케이스 17프로맥스",
-  "BSC-7/8/SE-DEF": "베이직 케이스 7/8/SE",
-  "BSC-Air-DEF": "베이직 케이스 Air",
-  "BSC-X/Xs-DEF": "베이직 케이스 X/Xs",
-  "BSC-XR-DEF": "베이직 케이스 XR",
-  "BSC-XsMax-DEF": "베이직 케이스 Xs Max",
-  "DPR-블랙-DEF": "DW STAND PRO 블랙",
-  "DPR-실버-DEF": "DW STAND PRO 실버",
-  "DSB-블랙-DEF": "DW STAND BASIC 블랙",
-  "DSB-실버-DEF": "DW STAND BASIC 실버",
-  "DSP-그린-DEF": "DW STAND PLUS 그린",
-  "DSP-블랙-DEF": "DW STAND PLUS 블랙",
-  "DSP-실버-DEF": "DW STAND PLUS 실버",
-  "FCA-11-DEF": "프레임 케이스 에어 11",
-  "FCA-11프로-DEF": "프레임 케이스 에어 11프로",
-  "FCA-11프로맥스-DEF": "프레임 케이스 에어 11프로맥스",
-  "FCA-12미니-DEF": "프레임 케이스 에어 12미니",
-  "FCA-12프로-DEF": "프레임 케이스 에어 12프로",
-  "FCA-12프로맥스-DEF": "프레임 케이스 에어 12프로맥스",
-  "FCA-13-DEF": "프레임 케이스 에어 13",
-  "FCA-13미니-DEF": "프레임 케이스 에어 13미니",
-  "FCA-13프로-DEF": "프레임 케이스 에어 13프로",
-  "FCA-13프로맥스-DEF": "프레임 케이스 에어 13프로맥스",
-  "FCA-14프로-DEF": "프레임 케이스 에어 14프로",
-  "FCA-14프로맥스-DEF": "프레임 케이스 에어 14프로맥스",
-  "FCA-14플러스-DEF": "프레임 케이스 에어 14플러스",
-  "FCA-15-DEF": "프레임 케이스 에어 15",
-  "FCA-15프로-DEF": "프레임 케이스 에어 15프로",
-  "FCA-15프로맥스-DEF": "프레임 케이스 에어 15프로맥스",
-  "FCA-15플러스-DEF": "프레임 케이스 에어 15 플러스",
-  "FCA-16-DEF": "프레임 케이스 에어 16",
-  "FCA-16E-DEF": "프레임 케이스 에어 16E",
-  "FCA-16프로-DEF": "프레임 케이스 에어 16 프로",
-  "FCA-16프로맥스-DEF": "프레임 케이스 에어 16프로맥스",
-  "FCA-16플러스-DEF": "프레임 케이스 에어 16 플러스",
-  "FCA-17-DEF": "프레임 케이스 에어 17",
-  "FCA-17프로-DEF": "프레임 케이스 에어 17프로",
-  "FCA-17프로맥스-DEF": "프레임 케이스 에어 17프로맥스",
-  "FCA-Air-DEF": "프레임 케이스 에어 Air",
-  "FCB-11프로-DEF": "프레임 케이스 범퍼 11프로",
-  "FCB-11프로맥스-DEF": "프레임 케이스 범퍼 11프로맥스",
-  "FCB-12미니-DEF": "프레임 케이스 범퍼 12미니",
-  "FCB-12프로-DEF": "프레임 케이스 범퍼 12프로",
-  "FCB-12프로맥스-DEF": "프레임 케이스 범퍼 12프로맥스",
-  "FCB-13/14-DEF": "프레임 케이스 범퍼 13/14",
-  "FCB-13미니-DEF": "프레임 케이스 범퍼 13미니",
-  "FCB-13프로-DEF": "프레임 케이스 범퍼 13프로",
-  "FCB-13프로맥스-DEF": "프레임 케이스 범퍼 13프로맥스",
-  "FCB-14프로-DEF": "프레임 케이스 범퍼 14프로",
-  "FCB-14프로맥스-DEF": "프레임 케이스 범퍼 14프로맥스",
-  "FCB-14플러스-DEF": "프레임 케이스 범퍼 14플러스",
-  "FCB-15-DEF": "프레임 케이스 범퍼 15",
-  "FCB-15프로-DEF": "프레임 케이스 범퍼 15프로",
-  "FCB-15프로맥스-DEF": "프레임 케이스 범퍼 15프로맥스",
-  "FCB-15플러스-DEF": "프레임 케이스 범퍼 15 플러스",
-  "FCB-16-DEF": "프레임 케이스 범퍼 16",
-  "FCB-16E-DEF": "프레임 케이스 범퍼 16E",
-  "FCB-16프로-DEF": "프레임 케이스 범퍼 16 프로",
-  "FCB-16프로맥스-DEF": "프레임 케이스 범퍼 16프로맥스",
-  "FCB-16플러스-DEF": "프레임 케이스 범퍼 16 플러스",
-  "FCB-17-DEF": "프레임 케이스 범퍼 17",
-  "FCB-17프로-DEF": "프레임 케이스 범퍼 17프로",
-  "FCB-17프로맥스-DEF": "프레임 케이스 범퍼 17프로맥스",
-  "FCB-7/8/se-DEF": "프레임 케이스 범퍼 7/8/se",
-  "FCB-Air-DEF": "프레임 케이스 범퍼 Air",
-  "FCB-N20-DEF": "프레임 케이스 범퍼 N20",
-  "FCB-N20U-DEF": "프레임 케이스 범퍼 N20U",
-  "FCB-S20+-DEF": "프레임 케이스 범퍼 S20+",
-  "FCB-S20-DEF": "프레임 케이스 범퍼 S20",
-  "FCB-S20U-DEF": "프레임 케이스 범퍼 S20U",
-  "FCB-S21+-DEF": "프레임 케이스 범퍼 S21+",
-  "FCB-S21-DEF": "프레임 케이스 범퍼 S21",
-  "FCB-S21U-DEF": "프레임 케이스 범퍼 S21U",
-  "FCB-S22+-DEF": "프레임 케이스 범퍼 S22+",
-  "FCB-S22U-DEF": "프레임 케이스 범퍼 S22U",
-  "FCB-S23+-DEF": "프레임 케이스 범퍼 S23+",
-  "FCB-S23U-DEF": "프레임 케이스 범퍼 S23U",
-  "FCB-S24+-DEF": "프레임 케이스 범퍼 S24+",
-  "FCB-S24U-DEF": "프레임 케이스 범퍼 S24U",
-  "FCB-S25+-DEF": "프레임 케이스 범퍼 S25+",
-  "FCB-S25U-DEF": "프레임 케이스 범퍼 S25U",
-  "FCB-XR-DEF": "프레임 케이스 범퍼 XR",
-  "FCB-XSMAX-DEF": "프레임 케이스 범퍼 XS MAX",
-  "FCS-12미니-블랙": "프레임 케이스 실리콘 12미니 블랙",
-  "FCS-12프로-블랙": "프레임 케이스 실리콘 12프로 블랙",
-  "FCS-12프로-블루": "프레임 케이스 실리콘 12프로 블루",
-  "FCS-12프로-핑크": "프레임 케이스 실리콘 12프로 핑크",
-  "FCS-12프로-화이트": "프레임 케이스 실리콘 12프로 화이트",
-  "FCS-12프로맥스-블랙": "프레임 케이스 실리콘 12프로맥스 블랙",
-  "FCS-13/14-블랙": "프레임 케이스 실리콘 13/14 블랙",
-  "FCS-13/14-블루": "프레임 케이스 실리콘 13/14 블루",
-  "FCS-13/14-핑크": "프레임 케이스 실리콘 13/14 핑크",
-  "FCS-13/14-화이트": "프레임 케이스 실리콘 13/14 화이트",
-  "FCS-13미니-블랙": "프레임 케이스 실리콘 13미니 블랙",
-  "FCS-13프로-블랙": "프레임 케이스 실리콘 13프로 블랙",
-  "FCS-13프로-블루": "프레임 케이스 실리콘 13프로 블루",
-  "FCS-13프로-핑크": "프레임 케이스 실리콘 13프로 핑크",
-  "FCS-13프로-화이트": "프레임 케이스 실리콘 13프로 화이트",
-  "FCS-13프로맥스-블랙": "프레임 케이스 실리콘 13프로맥스 블랙",
-  "FCS-14프로-블루": "프레임 케이스 실리콘 14프로 블루",
-  "FCS-14프로-핑크": "프레임 케이스 실리콘 14프로 핑크",
-  "FCS-14프로-화이트": "프레임 케이스 실리콘 14프로 화이트",
-  "FCS-14프로맥스-블랙": "프레임 케이스 실리콘 14프로맥스 블랙",
-  "FCS-15-블랙": "프레임 케이스 실리콘 15 블랙",
-  "FCS-15-블루": "프레임 케이스 실리콘 15 블루",
-  "FCS-15-핑크": "프레임 케이스 실리콘 15 핑크",
-  "FCS-15-화이트": "프레임 케이스 실리콘 15 화이트",
-  "FCS-15프로-블랙": "프레임 케이스 실리콘 15프로 블랙",
-  "FCS-15프로-블루": "프레임 케이스 실리콘 15프로 블루",
-  "FCS-15프로-핑크": "프레임 케이스 실리콘 15프로 핑크",
-  "FCS-15프로-화이트": "프레임 케이스 실리콘 15프로 화이트",
-  "FCS-15프로맥스-블랙": "프레임 케이스 실리콘 15프로맥스 블랙",
-  "FCS-16-블랙": "프레임 케이스 실리콘 16 블랙",
-  "FCS-16프로-블랙": "프레임 케이스 실리콘 16프로 블랙",
-  "FCS-16프로맥스-블랙": "프레임 케이스 실리콘 16프로맥스 블랙",
-  "FIL-11프로-DEF": "액정보호필름 11프로",
-  "FIL-11프로맥스-DEF": "액정보호필름 11프로맥스",
-  "FIL-12프로-DEF": "액정보호필름 12프로",
-  "FIL-12프로맥스-DEF": "액정보호필름 12프로맥스",
-  "FIL-13/13프로/14/16E-DEF": "액정보호필름 13/13프로/14/16E",
-  "FIL-13프로맥스-DEF": "액정보호필름 13프로맥스",
-  "FIL-14프로-DEF": "액정보호필름 14프로",
-  "FIL-14프로맥스/15플러스-DEF": "액정보호필름 14프로맥스/15플러스",
-  "FIL-14플러스-DEF": "액정보호필름 14플러스",
-  "FIL-15-DEF": "액정보호필름 15",
-  "FIL-15프로-DEF": "액정보호필름 15프로",
-  "FIL-15프로맥스-DEF": "액정보호필름 15프로맥스",
-  "FIL-15플러스-DEF": "액정보호필름 15플러스",
-  "FIL-16-DEF": "액정보호필름 16",
-  "FIL-16프로-DEF": "액정보호필름 16프로",
-  "FIL-16프로맥스-DEF": "액정보호필름 16프로맥스",
-  "FIL-16플러스-DEF": "액정보호필름 16플러스",
-  "FIL-17-DEF": "액정보호필름 17",
-  "FIL-17프로-DEF": "액정보호필름 17프로",
-  "FIL-17프로맥스-DEF": "액정보호필름 17프로맥스",
-  "FIL-Air-DEF": "액정보호필름 Air",
-  "FLC-BM-DEF": "FLEP CHAIR BUTTER MILK",
-  "FLC-CB-DEF": "FLEP CHAIR COSMOS BLUE",
-  "FLC-SB-DEF": "FLEP CHAIR SKY BLUE",
-  "FLC-YL-DEF": "FLEP CHAIR YELLOW",
-  "FTL-HARD-DEF": "FRAME TIP LONG HARD",
-  "FTL-MEDIUM-DEF": "FRAME TIP LONG MEDIUM",
-  "FTL-SET(SOFT/MEDIUM/HARD)-DEF": "FRAME TIP LONG SET(SOFT/MEDIUM/HARD)",
-  "FTL-SET(SOFT/MEDIUM/HARD/SOLID)-DEF": "FRAME TIP LONG SET(LIGHT/STANDARD/HEAVY/SOLID)",
-  "FTL-SET-DEF": "FRAME TIP LONG SET",
-  "FTL-SOFT-DEF": "FRAME TIP LONG SOFT",
-  "FTL-SOLID-DEF": "FRAME TIP LONG SOLID",
-  "FTS-HEAVY-DEF": "FRAME TIP SHORT HEAVY",
-  "FTS-LIGHT-DEF": "FRAME TIP SHORT LIGHT",
-  "FTS-SET(LIGHT/STANDARD/HEAVY)-DEF": "FRAME TIP SHORT SET(LIGHT/STANDARD/HEAVY)",
-  "FTS-SET(LIGHT/STANDARD/HEAVY/SOLID)-DEF": "FRAME TIP SHORT SET(LIGHT/STANDARD/HEAVY/SOLID)",
-  "FTS-SOLID-DEF": "FRAME TIP SHORT SOLID",
-  "FTS-STANDARD-DEF": "FRAME TIP SHORT STANDARD",
-  "MAT-실버-DEF": "MAGSAFE ARC TOK 실버",
-  "MCA-12미니-DEF": "맥세이프 케이스 에어 12미니",
-  "MCA-12프로-DEF": "맥세이프 케이스 에어 12프로",
-  "MCA-12프로맥스-DEF": "맥세이프 케이스 에어 12프로맥스",
-  "MCA-13/14-DEF": "맥세이프 케이스 에어 13/14",
-  "MCA-13미니-DEF": "맥세이프 케이스 에어 13미니",
-  "MCA-13프로-DEF": "맥세이프 케이스 에어 13프로",
-  "MCA-13프로맥스-DEF": "맥세이프 케이스 에어 13프로맥스",
-  "MCA-14프로-DEF": "맥세이프 케이스 에어 14프로",
-  "MCA-14프로맥스-DEF": "맥세이프 케이스 에어 14프로맥스",
-  "MCA-14플러스-DEF": "맥세이프 케이스 에어 14플러스",
-  "MCA-15-DEF": "맥세이프 케이스 에어 15",
-  "MCA-15프로-DEF": "맥세이프 케이스 에어 15프로",
-  "MCA-15프로맥스-DEF": "맥세이프 케이스 에어 15프로맥스",
-  "MCA-15플러스-DEF": "맥세이프 케이스 에어 15 플러스",
-  "MCA-16-DEF": "맥세이프 케이스 에어 16",
-  "MCA-16E-DEF": "맥세이프 케이스 에어 16E",
-  "MCA-16프로-DEF": "맥세이프 케이스 에어 16 프로",
-  "MCA-16프로맥스-DEF": "맥세이프 케이스 에어 16프로맥스",
-  "MCA-16플러스-DEF": "맥세이프 케이스 에어 16 플러스",
-  "MCA-17-DEF": "맥세이프 케이스 에어 17",
-  "MCA-17프로-DEF": "맥세이프 케이스 에어 17프로",
-  "MCA-17프로맥스-DEF": "맥세이프 케이스 에어 17프로맥스",
-  "MCA-Air-DEF": "맥세이프 케이스 에어 Air",
-  "MCB-12미니-DEF": "맥세이프 케이스 범퍼 12미니",
-  "MCB-12프로-DEF": "맥세이프 케이스 범퍼 12프로",
-  "MCB-12프로맥스-DEF": "맥세이프 케이스 범퍼 12프로맥스",
-  "MCB-13/14-DEF": "맥세이프 케이스 범퍼 13/14",
-  "MCB-13미니-DEF": "맥세이프 케이스 범퍼 13미니",
-  "MCB-13프로-DEF": "맥세이프 케이스 범퍼 13프로",
-  "MCB-13프로맥스-DEF": "맥세이프 케이스 범퍼 13프로맥스",
-  "MCB-14프로-DEF": "맥세이프 케이스 범퍼 14프로",
-  "MCB-14프로맥스-DEF": "맥세이프 케이스 범퍼 14프로맥스",
-  "MCB-14플러스-DEF": "맥세이프 케이스 범퍼 14플러스",
-  "MCB-15-DEF": "맥세이프 케이스 범퍼 15",
-  "MCB-15프로-DEF": "맥세이프 케이스 범퍼 15프로",
-  "MCB-15프로맥스-DEF": "맥세이프 케이스 범퍼 15프로맥스",
-  "MCB-15플러스-DEF": "맥세이프 케이스 범퍼 15 플러스",
-  "MCB-16-DEF": "맥세이프 케이스 범퍼 16",
-  "MCB-16E-DEF": "맥세이프 케이스 범퍼 16E",
-  "MCB-16프로-DEF": "맥세이프 케이스 범퍼 16 프로",
-  "MCB-16프로맥스-DEF": "맥세이프 케이스 범퍼 16프로맥스",
-  "MCB-16플러스-DEF": "맥세이프 케이스 범퍼 16 플러스",
-  "MCB-17-DEF": "맥세이프 케이스 범퍼 17",
-  "MCB-17프로-DEF": "맥세이프 케이스 범퍼 17프로",
-  "MCB-17프로맥스-DEF": "맥세이프 케이스 범퍼 17프로맥스",
-  "MCB-Air-DEF": "맥세이프 케이스 범퍼 Air",
-  "MCS-12미니-블랙": "맥세이프 케이스 실리콘 12미니 블랙",
-  "MCS-12프로-블랙": "맥세이프 케이스 실리콘 12프로 블랙",
-  "MCS-12프로-블루": "맥세이프 케이스 실리콘 12프로 블루",
-  "MCS-12프로-핑크": "맥세이프 케이스 실리콘 12프로 핑크",
-  "MCS-12프로-화이트": "맥세이프 케이스 실리콘 12프로 화이트",
-  "MCS-12프로맥스-블랙": "맥세이프 케이스 실리콘 12프로맥스 블랙",
-  "MCS-13/14-블랙": "맥세이프 케이스 실리콘 13/14 블랙",
-  "MCS-13/14-블루": "맥세이프 케이스 실리콘 13/14 블루",
-  "MCS-13/14-핑크": "맥세이프 케이스 실리콘 13/14 핑크",
-  "MCS-13/14-화이트": "맥세이프 케이스 실리콘 13/14 화이트",
-  "MCS-13미니-블랙": "맥세이프 케이스 실리콘 13미니 블랙",
-  "MCS-13프로-블랙": "맥세이프 케이스 실리콘 13프로 블랙",
-  "MCS-13프로-블루": "맥세이프 케이스 실리콘 13프로 블루",
-  "MCS-13프로-핑크": "맥세이프 케이스 실리콘 13프로 핑크",
-  "MCS-13프로-화이트": "맥세이프 케이스 실리콘 13프로 화이트",
-  "MCS-13프로맥스-블랙": "맥세이프 케이스 실리콘 13프로맥스 블랙",
-  "MCS-14프로-블루": "맥세이프 케이스 실리콘 14프로 블루",
-  "MCS-14프로-핑크": "맥세이프 케이스 실리콘 14프로 핑크",
-  "MCS-14프로-화이트": "맥세이프 케이스 실리콘 14프로 화이트",
-  "MCS-14프로맥스-블랙": "맥세이프 케이스 실리콘 14프로맥스 블랙",
-  "MCS-15-블랙": "맥세이프 케이스 실리콘 15 블랙",
-  "MCS-15-블루": "맥세이프 케이스 실리콘 15 블루",
-  "MCS-15-핑크": "맥세이프 케이스 실리콘 15 핑크",
-  "MCS-15-화이트": "맥세이프 케이스 실리콘 15 화이트",
-  "MCS-15프로-블랙": "맥세이프 케이스 실리콘 15프로 블랙",
-  "MCS-15프로-블루": "맥세이프 케이스 실리콘 15프로 블루",
-  "MCS-15프로-핑크": "맥세이프 케이스 실리콘 15프로 핑크",
-  "MCS-15프로-화이트": "맥세이프 케이스 실리콘 15프로 화이트",
-  "MCS-15프로맥스-블랙": "맥세이프 케이스 실리콘 15프로맥스 블랙",
-  "MCS-16-블랙": "맥세이프 케이스 실리콘 16 블랙",
-  "MCS-16프로-블랙": "맥세이프 케이스 실리콘 16프로 블랙",
-  "MCS-16프로맥스-블랙": "맥세이프 케이스 실리콘 16프로맥스 블랙",
-  "MFR-투명-DEF": "MAGSAFE FRAME 투명",
-  "MGR-블랙-DEF": "MAGSAFE GRIP 블랙",
-  "MGR-실버-DEF": "MAGSAFE GRIP 실버",
-  "MKF-투명-DEF": "MAGSAFE KICK FRAME 투명",
-  "MKFM-투명-DEF": "MAGSAFE KICK FRAME METAL 투명",
-  "MKP-투명-DEF": "MAGSAFE KICK PRO 투명",
-  "MTB-12미니-DEF": "매트블랙 12미니",
-  "MTB-12프로-DEF": "매트블랙 12프로",
-  "MTB-12프로맥스-DEF": "매트블랙 12프로맥스",
-  "MTB-13-DEF": "매트블랙 13",
-  "MTB-13미니-DEF": "매트블랙 13미니",
-  "MTB-13프로-DEF": "매트블랙 13프로",
-  "MTB-13프로맥스-DEF": "매트블랙 13프로맥스",
-  "MTB-14프로-DEF": "매트블랙 14프로",
-  "MTB-14프로맥스-DEF": "매트블랙 14프로맥스",
-  "MTB-14플러스-DEF": "매트블랙 14플러스",
-  "MTB-15-DEF": "매트블랙 15",
-  "MTB-15프로-DEF": "매트블랙 15프로",
-  "MTB-15프로맥스-DEF": "매트블랙 15프로맥스",
-  "MTB-15플러스-DEF": "매트블랙 15 플러스",
-  "MTB-16-DEF": "매트블랙 16",
-  "MTB-16프로-DEF": "매트블랙 16프로",
-  "MTB-16프로맥스-DEF": "매트블랙 16프로맥스",
-  "MTB-16플러스-DEF": "매트블랙 16플러스",
-  "MTB-7/8/se-DEF": "매트블랙 7/8/se",
-  "PHS-그린-DEF": "PH STAND 실버",
-  "PHS-블랙-DEF": "PH STAND 블랙",
-  "PHS-실버-DEF": "PH STAND 실버",
-  "STC-Airpods1/2-DEF": "스탠드케이스 Airpods 1/2",
-  "STC-Airpods3-DEF": "스탠드케이스 Airpods 3",
-  "STC-AirpodsPro1-DEF": "스탠드케이스 Airpods Pro1",
-  "STC-AirpodsPro2-DEF": "스탠드케이스 Airpods Pro2",
-  "STC-AirpodsPro3-DEF": "스탠드케이스 Airpods Pro3",
+const TYPE_META = {
+  review:  { label: "리뷰",  colorVar: "--c-review"  },
+  inquiry: { label: "문의",  colorVar: "--c-inquiry" },
+  chat:    { label: "상담",  colorVar: "--c-chat"    }
 };
 
-// ------------------------------------------------------------------
-// 다크/라이트 모드
-// ------------------------------------------------------------------
-const ICON_MOON = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>';
-const ICON_SUN = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+let STATE = { events: [], lastSync: null, channelColorMap: {}, charts: {} };
+let CHANNEL_COLOR_ORDER = []; // 최초 등장 순서대로 채널명을 기록해 색을 고정 배정
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  const btn = document.getElementById('themeToggle');
-  btn.innerHTML = theme === 'dark' ? ICON_SUN : ICON_MOON;
-  btn.title = theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환';
-  localStorage.setItem('cs-dashboard-theme', theme);
-}
-function initTheme() {
-  const saved = localStorage.getItem('cs-dashboard-theme');
-  applyTheme(saved === 'light' ? 'light' : 'dark'); // 기본값 다크
-}
-document.getElementById('themeToggle').addEventListener('click', () => {
-  const current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current === 'dark' ? 'light' : 'dark');
-  if (lastRawSalesData) {
-    renderMonthlyTrendChart(aggregateMonthlyTrend(lastRawSalesData));
-    refreshShipTop();
-    refreshExchTop();
-  }
-  if (lastShippingData) renderShippingChart(lastShippingData);
-});
-initTheme();
+/* ================= HELPERS ================= */
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function currentTheme(){ return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"; }
+function catColors(){ return CAT_PALETTE[currentTheme()]; }
+function seqBlue(){ return currentTheme() === "light" ? SEQ_BLUE : SEQ_BLUE_DARK; }
 
-// ------------------------------------------------------------------
-// 유틸
-// ------------------------------------------------------------------
-function fetchCsvRaw(url) {
-  return new Promise((resolve, reject) => {
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => resolve(res.data),
-      error: (err) => reject(err),
+function parseDateStr(s){
+  if(!s) return null;
+  const m = String(s).trim().match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if(!m) return null;
+  const d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+  return isNaN(d.getTime()) ? null : d;
+}
+function fmtDate(d){ if(!d) return "-"; const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())}`; }
+function fmtDateShort(d){ const p = n => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())}`; }
+function parseRating(s){ const n = parseInt(String(s||"").replace(/[^0-9]/g,""),10); return isNaN(n) ? null : n; }
+function isImportant(s){ return !!(s && String(s).trim() !== ""); }
+function isBlank(s){ return !s || String(s).trim() === ""; }
+function fmtCount(v){ return (v||0).toLocaleString("ko-KR") + "건"; }
+function truncate(s, n){ if(!s) return ""; const t = String(s).trim(); return t.length > n ? t.slice(0, n) + "…" : t; }
+function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function channelColor(name){
+  if(!CHANNEL_COLOR_ORDER.includes(name)) CHANNEL_COLOR_ORDER.push(name);
+  const idx = CHANNEL_COLOR_ORDER.indexOf(name) % catColors().length;
+  return catColors()[idx];
+}
+
+/* ================= FETCH & PARSE ================= */
+async function fetchCsvText(sheetName){
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&_ts=${Date.now()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.text();
+}
+async function fetchSheetRows(sheetName, expectedCols){
+  const csvText = await fetchCsvText(sheetName);
+  const parsed = Papa.parse(csvText.trim(), { skipEmptyLines: true });
+  const rows = parsed.data;
+  if(!rows || !rows.length) return [];
+  const header = rows[0];
+  const idx = {};
+  expectedCols.forEach(col => { idx[col] = header.indexOf(col); });
+  return rows.slice(1)
+    .map(r => {
+      const obj = {};
+      expectedCols.forEach(col => { obj[col] = idx[col] >= 0 ? (r[idx[col]] ?? "").toString() : ""; });
+      return obj;
+    })
+    .filter(o => Object.values(o).some(v => v !== ""));
+}
+
+function buildEvents(reviewRows, inquiryRows, chatRows){
+  const events = [];
+  reviewRows.forEach(r => {
+    events.push({
+      type: "review", date: parseDateStr(r["리뷰 작성일"]), channel: r["채널"] || "미상", product: r["제품"] || "미상",
+      content: r["리뷰 내용"] || "", important: isImportant(r["중요"]), rating: parseRating(r["별점"]), stage: null, answered: null
     });
   });
-}
-function showBanner(msg) {
-  const el = document.getElementById('configBanner');
-  if (!msg) { el.style.display = 'none'; return; }
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-function themeColors() {
-  const styles = getComputedStyle(document.documentElement);
-  return {
-    text: styles.getPropertyValue('--text-secondary').trim(),
-    grid: styles.getPropertyValue('--border').trim(),
-  };
-}
-function fmtMMDD(d) {
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return mm + dd;
-}
-async function mapLimit(items, limit, fn) {
-  const results = new Array(items.length);
-  let idx = 0;
-  async function worker() {
-    while (idx < items.length) {
-      const cur = idx++;
-      results[cur] = await fn(items[cur], cur);
-    }
-  }
-  await Promise.all(new Array(Math.min(limit, items.length)).fill(0).map(worker));
-  return results;
-}
-
-// ------------------------------------------------------------------
-// 1) 판매내역(출고확인) 로드 - 날짜별 탭을 하나씩 시도, 유효한 것만 사용
-//    상반기(SHEET3)/하반기(SHEET1) 두 스프레드시트 모두 같은 방식으로 처리.
-//    상반기 초반 탭은 "상품코드" 컬럼명이 "제품명"으로 되어있고 비어있는 경우가
-//    있어 두 컬럼명을 모두 확인한다 (없으면 상품별 집계에서 주문내역으로 대체).
-// ------------------------------------------------------------------
-async function fetchOneSalesDay(spreadsheetId, dateObj) {
-  const mmdd = fmtMMDD(dateObj);
-  const sheetName = mmdd + '(출고확인)';
-  const url = gvizCsvUrlBySheetName(spreadsheetId, sheetName);
-  try {
-    const rows = await fetchCsvRaw(url);
-    // 탭이 없으면 구글이 워크북의 첫 번째 탭으로 대체 응답하므로
-    // 헤더에 "주문번호"가 있는지로 유효한 (출고확인) 탭인지 판별
-    if (!rows.length || !('주문번호' in rows[0])) return null;
-    const clean = rows
-      .filter(r => r['주문번호'])
-      .map(r => ({
-        orderNo: r['주문번호'],
-        trackingNo: r['운송장번호'],
-        item: r['주문내역'] || '',
-        sku: r['상품코드'] || r['제품명'] || '',
-        qty: Number(r['수량']) || 0,
-        platform: r['플랫폼명'] || '기타',
-        orderStatus: r['주문상태'] || '',
-        deliveryStatus: r['배송상태'] || '',
-        confirmDate: mmdd,
-      }));
-    return clean;
-  } catch (e) {
-    return null;
-  }
-}
-
-async function fetchSalesRange(spreadsheetId, startStr, endStr) {
-  const start = new Date(startStr + 'T00:00:00');
-  const end = endStr ? new Date(endStr + 'T00:00:00') : new Date();
-  const dates = [];
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    dates.push(new Date(d));
-  }
-  const perDay = await mapLimit(dates, 10, (d) => fetchOneSalesDay(spreadsheetId, d));
-  const validDays = [];
-  let allRows = [];
-  perDay.forEach((rows, i) => {
-    if (rows) {
-      validDays.push(fmtMMDD(dates[i]));
-      allRows = allRows.concat(rows);
-    }
-  });
-  return { rows: allRows, validDays };
-}
-
-async function fetchAllSalesData() {
-  const results = await Promise.all(
-    SALES_RANGES.map(r => fetchSalesRange(r.id, r.start, r.end))
-  );
-  let allRows = [];
-  let allValidDays = [];
-  results.forEach(res => {
-    allRows = allRows.concat(res.rows);
-    allValidDays = allValidDays.concat(res.validDays);
-  });
-  return { rows: allRows, validDays: allValidDays };
-}
-
-// 주문상태 정규화: 표현만 다르고 의미가 같은 상태들을 최대한 큰 카테고리로 묶어서
-// 표에 비슷한 항목이 중복 나열되지 않도록 한다.
-function normalizeOrderStatus(status) {
-  const s = (status || '').replace(/\s+/g, '');
-  if (!s) return '(미상)';
-  if (/누락/.test(s)) return '누락출고';
-  if (/오배송|오배달/.test(s)) return '오배송';
-  if (/반품/.test(s)) return '반품';
-  if (/교환/.test(s)) return '교환';
-  if (/환불/.test(s)) return '환불';
-  if (/취소/.test(s)) return '취소';
-  if (/지연|보류/.test(s)) return '배송지연/보류';
-  if (/완료|정상/.test(s)) return '정상출고';
-  return status.trim();
-}
-
-function aggregateSales(data) {
-  const { rows, validDays } = data;
-  const byDate = {};
-  const byStatus = {};
-  let totalQty = 0;
-
-  rows.forEach(r => {
-    byDate[r.confirmDate] = byDate[r.confirmDate] || { count: 0, qty: 0 };
-    byDate[r.confirmDate].count += 1;
-    byDate[r.confirmDate].qty += r.qty;
-
-    const statusKey = normalizeOrderStatus(r.orderStatus);
-    byStatus[statusKey] = (byStatus[statusKey] || 0) + 1;
-
-    totalQty += r.qty;
-  });
-
-  const issueCount = rows.filter(r => /누락|반품|환불/.test(r.orderStatus)).length;
-
-  return {
-    totalOrders: rows.length,
-    totalQty,
-    dayCount: validDays.length,
-    issueCount,
-    byDate,
-    byStatus,
-    validDays: Array.from(new Set(validDays)).sort(),
-  };
-}
-
-// 최근 N일(유효 집계일 기준) 필터
-function filterRowsByRecentDays(rawData, days) {
-  const sortedDays = Array.from(new Set(rawData.validDays)).sort();
-  const recentDays = new Set(sortedDays.slice(-days));
-  const rows = rawData.rows.filter(r => recentDays.has(r.confirmDate));
-  return { rows, validDays: sortedDays.slice(-days) };
-}
-
-// 월별 출고 추이(전체 기간 기준, 최근 N일 필터와 무관) - 출고 수량(qty) 합계
-function aggregateMonthlyTrend(rawData) {
-  const byMonth = {};
-  rawData.rows.forEach(r => {
-    const month = '2026-' + r.confirmDate.slice(0, 2);
-    byMonth[month] = (byMonth[month] || 0) + r.qty;
-  });
-  return Object.keys(byMonth).sort().map(month => ({ month, qty: byMonth[month] }));
-}
-
-let lastSalesData = null;
-let lastRawSalesData = null;
-let selectedRangeDays = 7;
-
-function renderSalesKpis(agg) {
-  const avgDaily = agg.dayCount ? Math.round(agg.totalOrders / agg.dayCount) : 0;
-  const issuePct = agg.totalOrders ? (agg.issueCount / agg.totalOrders * 100).toFixed(1) : '0.0';
-  const cards = [
-    { label: '확정출고 건수', value: agg.totalOrders.toLocaleString('ko-KR'), sub: agg.dayCount + '일 집계' },
-    { label: '일평균 확정출고 건수', value: avgDaily.toLocaleString('ko-KR'), sub: '' },
-    { label: '집계된 확정일 수', value: agg.dayCount + '일', sub: '최근 ' + selectedRangeDays + '일 기준' },
-    { label: '이슈 건수', value: agg.issueCount.toLocaleString('ko-KR') + ' (' + issuePct + '%)', sub: '누락/반품/환불 포함' },
-  ];
-  document.getElementById('salesKpiGrid').innerHTML = cards.map(c => `
-    <div class="kpi-card">
-      <p class="kpi-label">${c.label}</p>
-      <p class="kpi-value">${c.value}</p>
-      ${c.sub ? `<p class="kpi-sub">${c.sub}</p>` : ''}
-    </div>`).join('');
-}
-
-let salesTrendChartInstance;
-
-// 값 위에 %(또는 지정한 접미사) 라벨을 찍어주는 경량 플러그인
-function makePointLabelPlugin(suffix) {
-  return {
-    id: 'pointLabelPlugin',
-    afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      chart.data.datasets.forEach((dataset, i) => {
-        const meta = chart.getDatasetMeta(i);
-        if (meta.hidden) return;
-        meta.data.forEach((point, idx) => {
-          const value = dataset.data[idx];
-          if (value === null || value === undefined) return;
-          ctx.save();
-          ctx.fillStyle = dataset.borderColor || '#e5e7eb';
-          ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(value + (suffix || ''), point.x, point.y - 8);
-          ctx.restore();
-        });
-      });
-    },
-  };
-}
-
-function renderMonthlyTrendChart(monthlyArr) {
-  const colors = themeColors();
-  const trendCtx = document.getElementById('salesTrendChart');
-  if (salesTrendChartInstance) salesTrendChartInstance.destroy();
-  salesTrendChartInstance = new Chart(trendCtx, {
-    type: 'bar',
-    data: {
-      labels: monthlyArr.map(m => m.month),
-      datasets: [{ label: '출고 수량', data: monthlyArr.map(m => m.qty), backgroundColor: '#60a5fa' }],
-    },
-    options: {
-      responsive: true,
-      layout: { padding: { top: 20 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { color: colors.text, precision: 0 }, grid: { color: colors.grid } },
-        x: { ticks: { color: colors.text }, grid: { display: false } },
-      },
-    },
-    plugins: [makePointLabelPlugin('')],
-  });
-}
-
-// 상품별 출고 TOP10 표시용 이름 축약 규칙 (모델/색상별로 나누지 않는 개별 케이스)
-function skuLabel(sku) {
-  let label = SKU_MAP[sku] || sku;
-  label = label
-    .replace('DW STAND PRO 실버', 'DW 프로 실버')
-    .replace('DW STAND PRO 블랙', 'DW 프로 블랙')
-    .replace('DW STAND PLUS 실버', 'DW 플러스 실버')
-    .replace('DW STAND PLUS 블랙', 'DW 플러스 블랙')
-    .replace('DW STAND PLUS 그린', 'DW 플러스 그린')
-    .replace('MAGSAFE GRIP', '맥세이프 그립');
-  return label;
-}
-
-// 모델/기종 구분 없이 하나의 상품군으로 완전히 합쳐서 보여줄 것들.
-// rawLabel(코드→이름 변환 결과, 없으면 원본 텍스트)을 공백 제거 후 키워드로 판별한다.
-function productFamilyLabel(rawLabel) {
-  const norm = (rawLabel || '').replace(/\s+/g, '');
-  if (norm.includes('프레임팁') && norm.includes('스타터')) return '프레임팁 스타터팩';
-  if (/ph/i.test(norm) && norm.includes('블랙')) return 'PH 블랙';
-  if (/ph/i.test(norm) && (norm.includes('실버') || norm.includes('그레'))) return 'PH 실버';
-  if (norm.includes('프레임케이스') && norm.includes('범퍼')) return '프레임케이스 범퍼';
-  if (norm.includes('액정보호필름')) return '액정보호필름';
-  if (norm.includes('킥프레임') || /kick/i.test(norm)) return '킥프레임';
-  if (norm.includes('맥세이프') && norm.includes('에어') && !norm.includes('범퍼')) return '맥세이프 에어';
-  if (norm.includes('맥세이프') && norm.includes('범퍼')) return '맥세이프 범퍼';
-  return null;
-}
-
-// sku -> qty 맵을 제품별 출고 TOP10과 동일한 이름 축약/통합 규칙으로 합친다
-function mergeBySkuLabel(bySkuMap) {
-  const merged = {};
-  Object.entries(bySkuMap).forEach(([sku, qty]) => {
-    const rawLabel = SKU_MAP[sku] || sku;
-    const key = productFamilyLabel(rawLabel) || skuLabel(sku);
-    merged[key] = (merged[key] || 0) + qty;
-  });
-  return merged;
-}
-
-function renderBarList(elId, merged, limit) {
-  const top = Object.entries(merged).sort((a, b) => b[1] - a[1]).slice(0, limit);
-  const max = top.length ? top[0][1] : 1;
-  const el = document.getElementById(elId);
-  if (!top.length) { el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-  el.innerHTML = top.map(([label, qty]) => `
-    <div class="bar-row">
-      <span class="bar-label" title="${label}">${label}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, qty / max * 100)}%"></div></div>
-      <span class="bar-value">${qty.toLocaleString('ko-KR')}</span>
-    </div>`).join('');
-}
-
-// 제품별 출고/교환 TOP5 + 원형그래프용: 지정한 "최근 N일" 구간에서 (교환만 볼지
-// 여부에 따라) 제품 라벨별 수량을 합산하고 TOP5 + 나머지(otherSum)를 반환한다.
-// filterRowsByRecentDays는 기존 전역 기간 필터와 동일한 기준(최근 N개 확정일)을
-// 재사용해 대시보드 전체의 "최근 N일" 정의를 일관되게 유지한다.
-function computeTopNBreakdown(rawData, days, onlyExchange) {
-  const filtered = filterRowsByRecentDays(rawData, days).rows;
-  const src = onlyExchange
-    ? filtered.filter(r => normalizeOrderStatus(r.orderStatus) === '교환')
-    : filtered;
-  const bySku = {};
-  let total = 0;
-  src.forEach(r => {
-    const skuKey = r.sku || r.item.slice(0, 20) || '(미상)';
-    bySku[skuKey] = (bySku[skuKey] || 0) + r.qty;
-    total += r.qty;
-  });
-  const merged = mergeBySkuLabel(bySku);
-  const sorted = Object.entries(merged).sort((a, b) => b[1] - a[1]);
-  const top5 = sorted.slice(0, 5);
-  const top5Sum = top5.reduce((s, [, v]) => s + v, 0);
-  return { top5, otherSum: Math.max(0, total - top5Sum) };
-}
-
-const TOP5_PIE_COLORS = ['#3b82f6', '#f59e0b', '#a78bfa', '#4ade80', '#f87171', '#64748b'];
-let shipTopPieInstance, exchTopPieInstance;
-
-// 파이 조각 위에 직접 "제품명 / 비율(%)"을 그려주는 플러그인.
-// 비율이 클수록 글씨를 크게, 작을수록 작게 그린다 (9~20px 사이로 보간).
-function pieSliceLabelPlugin() {
-  return {
-    id: 'pieSliceLabelPlugin',
-    afterDatasetsDraw(chart) {
-      const meta = chart.getDatasetMeta(0);
-      if (!meta || meta.hidden) return;
-      const dataArr = chart.data.datasets[0].data;
-      const total = dataArr.reduce((s, v) => s + (Number(v) || 0), 0);
-      if (!total) return;
-      const { ctx } = chart;
-      meta.data.forEach((arc, idx) => {
-        const value = Number(dataArr[idx]) || 0;
-        if (!value) return;
-        const pct = (value / total) * 100;
-        const pos = arc.tooltipPosition ? arc.tooltipPosition() : { x: arc.x, y: arc.y };
-        const nameSize = Math.max(9, Math.min(20, 9 + (pct / 100) * 30));
-        const pctSize = Math.max(8, nameSize - 3);
-        const label = chart.data.labels[idx] || '';
-        ctx.save();
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,.55)';
-        ctx.shadowBlur = 3;
-        ctx.font = '700 ' + nameSize + 'px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText(label, pos.x, pos.y - nameSize * 0.62);
-        ctx.font = '600 ' + pctSize + 'px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText(pct.toFixed(1) + '%', pos.x, pos.y + pctSize * 0.62);
-        ctx.restore();
-      });
-    },
-  };
-}
-
-function renderTopPie(canvasId, prevInstance, top5, otherSum) {
-  const labels = top5.map(([label]) => label);
-  const data = top5.map(([, val]) => val);
-  if (otherSum > 0) { labels.push('기타'); data.push(otherSum); }
-  const ctx = document.getElementById(canvasId);
-  if (prevInstance) prevInstance.destroy();
-  return new Chart(ctx, {
-    type: 'pie',
-    data: { labels, datasets: [{ data, backgroundColor: TOP5_PIE_COLORS }] },
-    options: { responsive: true, plugins: { legend: { display: false } } },
-    plugins: [pieSliceLabelPlugin()],
-  });
-}
-
-let shipTopDays = 7;
-let exchTopDays = 7;
-
-function refreshShipTop() {
-  if (!lastRawSalesData) return;
-  const { top5, otherSum } = computeTopNBreakdown(lastRawSalesData, shipTopDays, false);
-  renderBarList('productBars', Object.fromEntries(top5), 5);
-  shipTopPieInstance = renderTopPie('shipTopPie', shipTopPieInstance, top5, otherSum);
-}
-
-function refreshExchTop() {
-  if (!lastRawSalesData) return;
-  const { top5, otherSum } = computeTopNBreakdown(lastRawSalesData, exchTopDays, true);
-  renderBarList('exchangeBars', Object.fromEntries(top5), 5);
-  exchTopPieInstance = renderTopPie('exchTopPie', exchTopPieInstance, top5, otherSum);
-}
-
-function wireTopRangeToolbar(toolbarId, getDays, setDays, refreshFn) {
-  document.querySelectorAll('#' + toolbarId + ' .range-btn').forEach(btn => {
-    if (Number(btn.dataset.days) === getDays()) btn.classList.add('active');
-    btn.addEventListener('click', () => {
-      setDays(Number(btn.dataset.days));
-      document.querySelectorAll('#' + toolbarId + ' .range-btn').forEach(b => b.classList.toggle('active', b === btn));
-      refreshFn();
+  inquiryRows.forEach(r => {
+    events.push({
+      type: "inquiry", date: parseDateStr(r["문의일"]), channel: r["채널"] || "미상", product: r["제품"] || "미상",
+      content: r["문의 내용"] || "", important: isImportant(r["중요"]), rating: null, stage: r["구매 단계"] || null, answered: !isBlank(r["답변"])
     });
   });
-}
-wireTopRangeToolbar('shipTopRangeToolbar', () => shipTopDays, (v) => { shipTopDays = v; }, refreshShipTop);
-wireTopRangeToolbar('exchTopRangeToolbar', () => exchTopDays, (v) => { exchTopDays = v; }, refreshExchTop);
-
-function renderOrderStatusTable(agg) {
-  const tbody = document.querySelector('#orderStatusTable tbody');
-  const entries = Object.entries(agg.byStatus).sort((a, b) => b[1] - a[1]);
-  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="2" class="empty">데이터 없음</td></tr>'; return; }
-  tbody.innerHTML = entries.map(([status, count]) =>
-    `<tr><td>${status}</td><td class="num">${count.toLocaleString('ko-KR')}</td></tr>`
-  ).join('');
-}
-
-// 주문상태별 현황도 상단 KPI 필터와 별개로, 자체 기간 버튼으로 독립 제어된다.
-let orderStatusDays = 7;
-function refreshOrderStatus() {
-  if (!lastRawSalesData) return;
-  const filtered = filterRowsByRecentDays(lastRawSalesData, orderStatusDays);
-  renderOrderStatusTable(aggregateSales(filtered));
-}
-wireTopRangeToolbar('orderStatusRangeToolbar', () => orderStatusDays, (v) => { orderStatusDays = v; }, refreshOrderStatus);
-
-// ------------------------------------------------------------------
-// 2) 배송현황 (일자,택배건수,누락,오배송,반품) 마스터 표 -> 월별 집계
-// ------------------------------------------------------------------
-async function fetchShippingMaster() {
-  const url = gvizCsvUrlByGid(SHEET2_ID, SHEET2_MASTER_GID);
-  const rows = await fetchCsvRaw(url);
-  return rows
-    .filter(r => r['date'])
-    .map(r => ({
-      date: r['date'],
-      count: Number(r['count']) || 0,
-      missing: Number(r['missing']) || 0,
-      wrong: Number(r['wrong']) || 0,
-      returns: Number(r['returns']) || 0,
-    }));
-}
-
-function aggregateShippingByMonth(rows) {
-  const byMonth = {};
-  rows.forEach(r => {
-    const month = r.date.slice(0, 7); // YYYY-MM
-    if (month < SHIPPING_START_MONTH || month > SHIPPING_END_MONTH) return;
-    byMonth[month] = byMonth[month] || { count: 0, missing: 0, wrong: 0, returns: 0 };
-    byMonth[month].count += r.count;
-    byMonth[month].missing += r.missing;
-    byMonth[month].wrong += r.wrong;
-    byMonth[month].returns += r.returns;
+  chatRows.forEach(r => {
+    events.push({
+      type: "chat", date: parseDateStr(r["인입일"]), channel: r["채널"] || "미상", product: r["제품"] || "미상",
+      content: r["상담 내용 요약"] || "", important: isImportant(r["중요"]), rating: null, stage: r["구매 단계"] || null, answered: null
+    });
   });
-  return Object.keys(byMonth).sort().map(month => {
-    const m = byMonth[month];
-    return {
-      month,
-      ...m,
-      missingRate: m.count ? m.missing / m.count : 0,
-      wrongRate: m.count ? m.wrong / m.count : 0,
-      returnsRate: m.count ? m.returns / m.count : 0,
-    };
-  });
+  return events.filter(e => e.date);
 }
 
-let lastShippingData = null;
-let shippingChartInstance;
-let selectedShippingMetric = 'missing';
-const SHIPPING_METRIC_CONFIG = {
-  missing: { key: 'missingRate', label: '누락율(%)', color: '#f87171' },
-  wrong: { key: 'wrongRate', label: '오배송율(%)', color: '#f59e0b' },
-  returns: { key: 'returnsRate', label: '반품율(%)', color: '#a78bfa' },
-};
-
-function renderShippingChart(monthly) {
-  const canvas = document.getElementById('shippingTrendChart');
-  const cfg = SHIPPING_METRIC_CONFIG[selectedShippingMetric];
-  const colors = themeColors();
-  if (shippingChartInstance) shippingChartInstance.destroy();
-  shippingChartInstance = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: monthly.map(m => m.month),
-      datasets: [
-        { label: cfg.label, data: monthly.map(m => +(m[cfg.key] * 100).toFixed(2)), borderColor: cfg.color, backgroundColor: cfg.color + '22', tension: 0.2 },
-      ],
-    },
-    options: {
-      responsive: true,
-      layout: { padding: { top: 24 } },
-      plugins: { legend: { position: 'bottom', labels: { color: colors.text, font: { size: 11 } } } },
-      scales: {
-        y: { beginAtZero: true, ticks: { color: colors.text, callback: v => v + '%' }, grid: { color: colors.grid } },
-        x: { ticks: { color: colors.text }, grid: { display: false } },
-      },
-    },
-    plugins: [makePointLabelPlugin('%')],
-  });
-}
-
-document.querySelectorAll('#shippingMetricToolbar .range-btn').forEach(btn => {
-  if (btn.dataset.metric === selectedShippingMetric) btn.classList.add('active');
-  btn.addEventListener('click', () => {
-    selectedShippingMetric = btn.dataset.metric;
-    document.querySelectorAll('#shippingMetricToolbar .range-btn').forEach(b => b.classList.toggle('active', b === btn));
-    if (lastShippingData) renderShippingChart(lastShippingData);
-  });
-});
-
-function renderShippingTable(monthly) {
-  const tbody = document.querySelector('#shippingTable tbody');
-  if (!monthly.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">데이터 없음</td></tr>'; return; }
-  tbody.innerHTML = monthly.map(m => `
-    <tr>
-      <td>${m.month}</td>
-      <td class="num">${m.count.toLocaleString('ko-KR')}</td>
-      <td class="num">${m.missing.toLocaleString('ko-KR')}</td>
-      <td class="num">${m.wrong.toLocaleString('ko-KR')}</td>
-      <td class="num">${m.returns.toLocaleString('ko-KR')}</td>
-      <td class="num">${(m.missingRate * 100).toFixed(2)}%</td>
-      <td class="num">${(m.wrongRate * 100).toFixed(2)}%</td>
-      <td class="num">${(m.returnsRate * 100).toFixed(2)}%</td>
-    </tr>`).join('');
-}
-
-// ------------------------------------------------------------------
-// 메인 로드
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// 로딩 속도 개선: 판매내역은 날짜별 시트 탭을 하나씩 요청하는 구조라
-// (2026-01-05 ~ 오늘, 2개 스프레드시트) 매번 200개 넘는 요청을 새로
-// 보내야 해서 느리다. localStorage에 마지막으로 불러온 데이터를 캐시해두고,
-// 재방문 시에는 캐시를 즉시 보여준 뒤 백그라운드에서 최신 데이터로
-// 조용히 갱신한다(stale-while-revalidate) — 첫 로딩 외에는 체감 속도가
-// 크게 빨라진다.
-// ------------------------------------------------------------------
-const CACHE_KEY = 'cs-dashboard-cache-v1';
-
-function saveCache(salesRaw, shippingRaw) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), salesRaw, shippingRaw }));
-  } catch (e) {}
-}
-function loadCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) { return null; }
-}
-
-// 상단 전역 기간 필터(#rangeToolbar)는 KPI 카드만 담당한다.
-// 제품별 출고/교환 TOP5, 주문상태별 현황은 각자의 행에 있는 별도 기간 버튼으로
-// 독립적으로 제어된다 (refreshShipTop/refreshExchTop/refreshOrderStatus).
-function applyRangeFilterAndRender() {
-  if (!lastRawSalesData) return;
-  const filtered = filterRowsByRecentDays(lastRawSalesData, selectedRangeDays);
-  const agg = aggregateSales(filtered);
-  lastSalesData = agg;
-  renderSalesKpis(agg);
-}
-
-document.querySelectorAll('#rangeToolbar .range-btn').forEach(btn => {
-  if (Number(btn.dataset.days) === selectedRangeDays) btn.classList.add('active');
-  btn.addEventListener('click', () => {
-    selectedRangeDays = Number(btn.dataset.days);
-    document.querySelectorAll('#rangeToolbar .range-btn').forEach(b => b.classList.toggle('active', b === btn));
-    applyRangeFilterAndRender();
-  });
-});
-
-function renderFromRaw(salesRaw, shippingRaw) {
-  lastRawSalesData = salesRaw;
-  applyRangeFilterAndRender();
-  renderMonthlyTrendChart(aggregateMonthlyTrend(salesRaw));
-  refreshShipTop();
-  refreshExchTop();
-  refreshOrderStatus();
-
-  const shippingMonthly = aggregateShippingByMonth(shippingRaw);
-  lastShippingData = shippingMonthly;
-  renderShippingChart(shippingMonthly);
-  renderShippingTable(shippingMonthly);
-}
-
-async function loadAll(forceRefresh) {
-  const cached = !forceRefresh ? loadCache() : null;
-  if (cached) {
-    // 캐시를 먼저 즉시 표시 (체감 로딩시간 단축), 최신 데이터는 아래서 백그라운드로 이어서 불러온다
-    renderFromRaw(cached.salesRaw, cached.shippingRaw);
-    const ageMin = Math.max(0, Math.round((Date.now() - cached.savedAt) / 60000));
-    document.getElementById('lastUpdated').textContent = '캐시된 데이터 (' + ageMin + '분 전) · 최신 데이터 불러오는 중...';
-  } else {
-    document.getElementById('lastUpdated').textContent = '불러오는 중...';
-  }
-  showBanner(null);
-  try {
-    const [salesRaw, shippingRaw] = await Promise.all([
-      fetchAllSalesData(),
-      fetchShippingMaster(),
+/* ================= LOAD ================= */
+async function loadAll(isRefresh){
+  const refreshBtn = document.getElementById("refreshBtn");
+  refreshBtn.disabled = true;
+  refreshBtn.classList.add("spinning");
+  try{
+    const [reviewRows, inquiryRows, chatRows] = await Promise.all([
+      fetchSheetRows(CONFIG.sheets.review, REVIEW_COLS),
+      fetchSheetRows(CONFIG.sheets.inquiry, INQUIRY_COLS),
+      fetchSheetRows(CONFIG.sheets.chat, CHAT_COLS)
     ]);
-
-    renderFromRaw(salesRaw, shippingRaw);
-    saveCache(salesRaw, shippingRaw);
-
-    document.getElementById('lastUpdated').textContent = '마지막 갱신 ' + new Date().toLocaleTimeString('ko-KR');
-  } catch (e) {
-    if (cached) {
-      document.getElementById('lastUpdated').textContent = '캐시된 데이터 표시 중 (최신 데이터를 불러오지 못했습니다)';
-    } else {
-      document.getElementById('lastUpdated').textContent = '불러오기 실패';
-      showBanner('데이터를 불러오지 못했습니다 (' + e.message + '). 두 스프레드시트가 "링크가 있는 모든 사용자" 이상으로 공유돼 있는지 확인해주세요.');
-    }
+    STATE.events = buildEvents(reviewRows, inquiryRows, chatRows);
+    STATE.lastSync = new Date();
+    setStatus(true);
+    renderAll();
+  }catch(err){
+    console.error(err);
+    setStatus(false, err.message);
+    document.getElementById("errorBanner").style.display = "block";
+  }finally{
+    refreshBtn.disabled = false;
+    refreshBtn.classList.remove("spinning");
   }
 }
 
-document.getElementById('refreshBtn').addEventListener('click', () => loadAll(true));
-loadAll(false);
+function setStatus(ok, msg){
+  const pill = document.getElementById("statusBadge");
+  const text = document.getElementById("statusBadgeText");
+  if(ok){
+    pill.className = "status-pill live";
+    text.textContent = "실시간 연동됨";
+    document.getElementById("errorBanner").style.display = "none";
+  }else{
+    pill.className = "status-pill err";
+    text.textContent = "연동 오류";
+    document.getElementById("errorBannerMsg").textContent = `데이터를 불러오지 못했습니다 (${msg || "네트워크 오류"}). 시트가 "링크가 있는 모든 사용자 - 뷰어"로 공유되어 있는지 확인한 뒤 새로고침을 눌러주세요.`;
+  }
+}
+
+/* ================= RENDER: ORCHESTRATOR ================= */
+function renderAll(){
+  const events = STATE.events;
+  const maxDate = events.reduce((m, e) => (!m || e.date > m) ? e.date : m, null);
+  document.getElementById("periodLabel").textContent = maxDate
+    ? `최신 데이터 기준일 ${fmtDate(maxDate)} · 마지막 동기화 ${STATE.lastSync.toLocaleTimeString("ko-KR")}`
+    : "데이터가 없습니다";
+  document.getElementById("lastSyncFooter").textContent = STATE.lastSync ? STATE.lastSync.toLocaleString("ko-KR") : "-";
+
+  renderKpis(events);
+  renderWatchlist(events);
+  renderTrend(events, maxDate);
+  renderChannels(events);
+  renderProducts(events);
+  renderRatings(events);
+  renderStage(events);
+  renderFeeds(events);
+}
+
+/* ================= KPI ================= */
+function renderKpis(events){
+  const reviews = events.filter(e => e.type === "review");
+  const inquiries = events.filter(e => e.type === "inquiry");
+  const chats = events.filter(e => e.type === "chat");
+  const avgRating = reviews.length ? (reviews.reduce((s,e) => s + (e.rating||0), 0) / reviews.filter(e=>e.rating).length) : 0;
+  const importantCount = events.filter(e => e.important).length;
+  const lowRateCount = reviews.filter(e => e.rating !== null && e.rating <= 3).length;
+  const answered = inquiries.filter(e => e.answered).length;
+  const answerRate = inquiries.length ? Math.round((answered / inquiries.length) * 100) : 0;
+
+  const cards = [
+    { cls:"accent-review", label:"전체 리뷰", value:`${fmtCount(reviews.length)}`, note:`평균 별점 <b>${avgRating ? avgRating.toFixed(1) : "-"}점</b>` },
+    { cls:"accent-inquiry", label:"전체 문의", value:`${fmtCount(inquiries.length)}`, note:`답변률 <b>${answerRate}%</b> (${answered}/${inquiries.length})`, progress: answerRate },
+    { cls:"accent-chat", label:"전체 상담", value:`${fmtCount(chats.length)}`, note:`활성 채널 <b>${new Set(chats.map(e=>e.channel)).size}개</b>` },
+    { cls:"accent-warn", label:"확인 필요 항목", value:`${fmtCount(importantCount + lowRateCount)}`, note:`'중요' 표시 <b>${importantCount}건</b> · 저평점 리뷰 <b>${lowRateCount}건</b>` }
+  ];
+  document.getElementById("kpiRow").innerHTML = cards.map(c => `
+    <div class="card ${c.cls}">
+      <div class="card-label">${c.label}</div>
+      <div class="card-value">${c.value}</div>
+      <div class="card-note">${c.note}</div>
+      ${c.progress !== undefined ? `<div class="progress-track"><div class="progress-fill" style="width:${c.progress}%;"></div></div>` : ""}
+    </div>
+  `).join("");
+}
+
+/* ================= WATCHLIST ================= */
+function renderWatchlist(events){
+  const flagged = events.filter(e => e.important || (e.type === "review" && e.rating !== null && e.rating <= 3));
+  flagged.sort((a,b) => b.date - a.date);
+  const top = flagged.slice(0, 15);
+  const el = document.getElementById("watchList");
+  if(!top.length){ el.innerHTML = `<div class="empty-state">현재 확인이 필요한 항목이 없습니다 👍</div>`; return; }
+  el.innerHTML = top.map(e => {
+    const meta = TYPE_META[e.type];
+    const tags = [`<span class="badge ${e.type}">${meta.label}</span>`];
+    if(e.important) tags.push(`<span class="badge important">중요</span>`);
+    if(e.type === "review" && e.rating !== null && e.rating <= 3) tags.push(`<span class="badge lowrate">★${e.rating}</span>`);
+    if(e.stage) tags.push(`<span class="badge stage">${escapeHtml(e.stage)}</span>`);
+    return `
+      <div class="watch-item">
+        <div class="watch-item-head">
+          ${tags.join("")}
+          <span class="watch-item-product">${escapeHtml(e.product)}</span>
+          <span class="watch-item-date">${fmtDate(e.date)} · ${escapeHtml(e.channel)}</span>
+        </div>
+        <div class="watch-item-content">${escapeHtml(truncate(e.content, 160))}</div>
+      </div>`;
+  }).join("");
+}
+
+/* ================= TREND CHART ================= */
+function renderTrend(events, maxDate){
+  const wrap = document.getElementById("trendChart").closest(".chart-card");
+  if(!events.length){ wrap.querySelector(".chart-wrap").innerHTML = `<div class="empty-state">표시할 데이터가 없습니다</div>`; document.getElementById("trendHint").textContent=""; return; }
+  const dayKeys = [...new Set(events.map(e => e.date.toISOString().slice(0,10)))].sort();
+  const days = dayKeys.slice(-30).map(k => new Date(k));
+  document.getElementById("trendHint").textContent = `최근 ${days.length}일 · 리뷰/문의/상담 일별 건수`;
+
+  function countFor(type, d){
+    const key = d.toISOString().slice(0,10);
+    return events.filter(e => e.type === type && e.date.toISOString().slice(0,10) === key).length;
+  }
+  const labels = days.map(fmtDateShort);
+  const datasets = [
+    { label:"리뷰", data: days.map(d=>countFor("review",d)), borderColor: cssVar("--c-review"), backgroundColor: cssVar("--c-review"), tension:.3, pointRadius:3, borderWidth:2 },
+    { label:"문의", data: days.map(d=>countFor("inquiry",d)), borderColor: cssVar("--c-inquiry"), backgroundColor: cssVar("--c-inquiry"), tension:.3, pointRadius:3, borderWidth:2 },
+    { label:"상담", data: days.map(d=>countFor("chat",d)), borderColor: cssVar("--c-chat"), backgroundColor: cssVar("--c-chat"), tension:.3, pointRadius:3, borderWidth:2 }
+  ];
+  destroyChart("trend");
+  const ctx = document.getElementById("trendChart").getContext("2d");
+  STATE.charts.trend = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: baseChartOptions({ legend:false, stacked:false })
+  });
+  document.getElementById("trendLegend").innerHTML = datasets.map(d => `<span><i style="background:${d.borderColor};"></i>${d.label}</span>`).join("");
+}
+
+/* ================= CHANNEL DONUTS ================= */
+function renderChannels(events){
+  const types = ["review","inquiry","chat"];
+  const html = types.map(t => `
+    <div class="chart-card donut-card">
+      <div class="ttl" style="align-self:flex-start;">${TYPE_META[t].label} 채널 비중</div>
+      <div class="donut-wrap"><canvas id="donut_${t}"></canvas><div class="donut-label"><div class="pct" id="donutPct_${t}">-</div><div class="nm" id="donutName_${t}">-</div></div></div>
+      <div class="legend" id="donutLegend_${t}"></div>
+    </div>`).join("");
+  document.getElementById("channelRow").innerHTML = html;
+
+  types.forEach(t => {
+    const subset = events.filter(e => e.type === t);
+    const counts = {};
+    subset.forEach(e => { counts[e.channel] = (counts[e.channel]||0) + 1; });
+    const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    destroyChart("donut_"+t);
+    if(!entries.length){
+      document.getElementById("donutLegend_"+t).innerHTML = `<span style="color:var(--sub);">데이터 없음</span>`;
+      return;
+    }
+    const colors = entries.map(([name]) => channelColor(name));
+    const total = entries.reduce((s,[,v])=>s+v,0);
+    const top = entries[0];
+    document.getElementById("donutPct_"+t).textContent = Math.round((top[1]/total)*100) + "%";
+    document.getElementById("donutName_"+t).textContent = truncate(top[0], 8);
+    const ctx = document.getElementById("donut_"+t).getContext("2d");
+    STATE.charts["donut_"+t] = new Chart(ctx, {
+      type: "doughnut",
+      data: { labels: entries.map(e=>e[0]), datasets: [{ data: entries.map(e=>e[1]), backgroundColor: colors, borderWidth: 2, borderColor: cssVar("--card") }] },
+      options: { cutout: "72%", plugins: { legend: { display:false }, tooltip: { callbacks: { label: (c)=> ` ${c.label}: ${fmtCount(c.parsed)}` } } }, maintainAspectRatio:false }
+    });
+    document.getElementById("donutLegend_"+t).innerHTML = entries.map(([name,v],i) => `<span><i style="background:${colors[i]};"></i>${escapeHtml(name)} (${v})</span>`).join("");
+  });
+}
+
+/* ================= PRODUCT TOP10 ================= */
+function renderProducts(events){
+  const counts = {};
+  events.forEach(e => { counts[e.product] = (counts[e.product]||0) + 1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const top = entries.slice(0, 10);
+  const wrap = document.getElementById("productChart").closest(".chart-card").querySelector(".chart-wrap");
+  destroyChart("product");
+  if(!top.length){ wrap.innerHTML = `<div class="empty-state">표시할 데이터가 없습니다</div>`; return; }
+  const ctx = document.getElementById("productChart").getContext("2d");
+  STATE.charts.product = new Chart(ctx, {
+    type: "bar",
+    data: { labels: top.map(e=>e[0]), datasets: [{ label:"언급 건수", data: top.map(e=>e[1]), backgroundColor: cssVar("--accent"), borderRadius:4, maxBarThickness: 26 }] },
+    options: { indexAxis: "y", plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>` ${fmtCount(c.parsed.x)}` } } },
+      scales: { x: { beginAtZero:true, grid:{ color: cssVar("--grid") }, ticks:{ color: cssVar("--sub") } }, y: { grid:{ display:false }, ticks:{ color: cssVar("--text"), font:{ size:11.5 } } } },
+      maintainAspectRatio:false }
+  });
+}
+
+/* ================= RATING CHART ================= */
+function renderRatings(events){
+  const reviews = events.filter(e => e.type === "review" && e.rating !== null);
+  const counts = {1:0,2:0,3:0,4:0,5:0};
+  reviews.forEach(e => { if(counts[e.rating] !== undefined) counts[e.rating]++; });
+  destroyChart("rating");
+  const wrap = document.getElementById("ratingChart").closest(".chart-card").querySelector(".chart-wrap");
+  if(!reviews.length){ wrap.innerHTML = `<div class="empty-state">표시할 리뷰가 없습니다</div>`; return; }
+  const ramp = seqBlue();
+  const ctx = document.getElementById("ratingChart").getContext("2d");
+  STATE.charts.rating = new Chart(ctx, {
+    type: "bar",
+    data: { labels:["1점","2점","3점","4점","5점"], datasets:[{ data:[1,2,3,4,5].map(n=>counts[n]), backgroundColor:[1,2,3,4,5].map(n=>ramp[n]), borderRadius:4, maxBarThickness: 44 }] },
+    options: { plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>` ${fmtCount(c.parsed.y)}` } } },
+      scales: { x:{ grid:{ display:false }, ticks:{ color: cssVar("--sub") } }, y:{ beginAtZero:true, grid:{ color: cssVar("--grid") }, ticks:{ color: cssVar("--sub"), precision:0 } } },
+      maintainAspectRatio:false }
+  });
+}
+
+/* ================= STAGE DONUT ================= */
+function renderStage(events){
+  const subset = events.filter(e => e.type !== "review" && e.stage);
+  const counts = {};
+  subset.forEach(e => { counts[e.stage] = (counts[e.stage]||0) + 1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  destroyChart("stage");
+  if(!entries.length){
+    document.getElementById("stageLegend").innerHTML = `<span style="color:var(--sub);">데이터 없음</span>`;
+    return;
+  }
+  const colors = catColors();
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  document.getElementById("stageTopPct").textContent = Math.round((entries[0][1]/total)*100) + "%";
+  document.getElementById("stageTopName").textContent = entries[0][0];
+  const ctx = document.getElementById("stageChart").getContext("2d");
+  STATE.charts.stage = new Chart(ctx, {
+    type: "doughnut",
+    data: { labels: entries.map(e=>e[0]), datasets:[{ data: entries.map(e=>e[1]), backgroundColor: entries.map((_,i)=>colors[i%colors.length]), borderWidth:2, borderColor: cssVar("--card") }] },
+    options: { cutout:"72%", plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>` ${c.label}: ${fmtCount(c.parsed)}` } } }, maintainAspectRatio:false }
+  });
+  document.getElementById("stageLegend").innerHTML = entries.map(([name,v],i) => `<span><i style="background:${colors[i%colors.length]};"></i>${escapeHtml(name)} (${v})</span>`).join("");
+}
+
+/* ================= FEED LIST ================= */
+let ACTIVE_FEED = "review";
+function renderFeeds(events){
+  const subset = events.filter(e => e.type === ACTIVE_FEED).sort((a,b) => b.date - a.date).slice(0, 20);
+  const el = document.getElementById("feedList");
+  if(!subset.length){ el.innerHTML = `<div class="empty-state">표시할 데이터가 없습니다</div>`; return; }
+  el.innerHTML = subset.map(e => {
+    const meta = TYPE_META[e.type];
+    const tags = [`<span class="badge ${e.type}">${meta.label}</span>`];
+    if(e.important) tags.push(`<span class="badge important">중요</span>`);
+    if(e.rating !== null) tags.push(`<span class="badge stage">★${e.rating}</span>`);
+    if(e.stage) tags.push(`<span class="badge stage">${escapeHtml(e.stage)}</span>`);
+    if(e.answered === false) tags.push(`<span class="badge lowrate">미답변</span>`);
+    return `
+      <div class="feed-item">
+        <div class="feed-item-head">
+          ${tags.join("")}
+          <span class="feed-item-product">${escapeHtml(e.product)}</span>
+          <span class="feed-item-date">${fmtDate(e.date)} · ${escapeHtml(e.channel)}</span>
+        </div>
+        <div class="feed-item-content">${escapeHtml(truncate(e.content, 200))}</div>
+      </div>`;
+  }).join("");
+}
+
+/* ================= CHART HELPERS ================= */
+function destroyChart(key){ if(STATE.charts[key]){ STATE.charts[key].destroy(); delete STATE.charts[key]; } }
+function baseChartOptions(){
+  return {
+    maintainAspectRatio:false,
+    interaction: { mode:"index", intersect:false },
+    plugins: { legend:{ display:false }, tooltip:{ mode:"index", intersect:false } },
+    scales: {
+      x: { grid:{ display:false }, ticks:{ color: cssVar("--sub"), maxRotation:0, autoSkip:true } },
+      y: { beginAtZero:true, grid:{ color: cssVar("--grid") }, ticks:{ color: cssVar("--sub"), precision:0 } }
+    }
+  };
+}
+
+/* ================= THEME ================= */
+function applyTheme(theme){
+  document.documentElement.setAttribute("data-theme", theme);
+  document.getElementById("themeLightBtn").classList.toggle("active", theme === "light");
+  document.getElementById("themeDarkBtn").classList.toggle("active", theme === "dark");
+  if(STATE.events && STATE.events.length) renderAll(); // 테마 변경 시 차트 색상 재적용
+}
+
+/* ================= INIT ================= */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("sheetLink").href = CONFIG.spreadsheetUrl;
+  applyTheme("dark"); // 새로고침 시 초기화(브라우저 저장소 미사용); 필요 시 아래 값을 "light"로 변경하세요.
+
+  document.getElementById("themeLightBtn").addEventListener("click", () => applyTheme("light"));
+  document.getElementById("themeDarkBtn").addEventListener("click", () => applyTheme("dark"));
+  document.getElementById("refreshBtn").addEventListener("click", () => loadAll(true));
+  document.querySelectorAll("#feedTabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#feedTabs button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      ACTIVE_FEED = btn.dataset.feed;
+      renderFeeds(STATE.events);
+    });
+  });
+
+  loadAll(false);
+});
 </script>
 </body>
 </html>
