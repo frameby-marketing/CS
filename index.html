@@ -56,7 +56,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .row{display:grid;gap:14px}
 .row.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .row.wide{grid-template-columns:1.6fr 1fr}
-.row.half{grid-template-columns:1.15fr 1fr}
+.row.two{grid-template-columns:1fr 1fr}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
 .panel.hero{border-top:3px solid var(--c,var(--accent));padding:18px 18px 10px}
 .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px}
@@ -83,7 +83,8 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .chg.upn{color:var(--accent)}
 .tagx{display:inline-block;font-size:10.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px;background:rgba(255,92,108,.12);color:var(--bad)}
 /* 리뷰 */
-.reviews{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rvlist{display:grid;gap:10px;max-height:640px;overflow:auto;padding-right:4px}
+.rv.full .rv-t{display:block;-webkit-line-clamp:unset;overflow:visible;white-space:pre-line}
 .rv{border:1px solid var(--line);border-radius:12px;padding:13px 14px;border-left:3px solid var(--c,var(--accent));min-width:0}
 .rv-h{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px}
 .rv-tag{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;background:var(--track);color:var(--c,var(--accent))}
@@ -92,12 +93,6 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .rv-p{font-size:12.5px;font-weight:700;margin-bottom:5px}
 .rv-t{font-size:12.5px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .rv-m{font-size:11px;color:var(--sub);margin-top:7px}
-/* 코멘트 */
-.note{font-size:12.5px;line-height:1.65}
-.note .tag{display:inline-block;font-size:10.5px;color:var(--sub);background:var(--track);border-radius:99px;padding:3px 9px;margin-bottom:6px}
-.note dl{margin:0}
-.note dt{font-size:11px;color:var(--sub);font-weight:700;margin-top:9px}
-.note dd{margin:3px 0 0}
 /* 씨딩 */
 .funnel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 12px}
 .fs{background:var(--track);border-radius:10px;padding:10px 11px;position:relative;overflow:hidden}
@@ -109,26 +104,80 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .camp span{color:var(--sub);font-weight:500;font-size:11px}
 .sdstat{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--sub);margin-bottom:10px}
 .sdstat b{color:var(--text);font-size:13px;margin-left:4px}
-.post{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:12.5px}
+.post{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:12.5px}
 .post b{font-weight:700}
 .post small{color:var(--sub);font-size:11px;margin-left:6px}
 .post .eng{color:var(--sub);font-size:11.5px;white-space:nowrap}
 .post a{font-size:11.5px;white-space:nowrap}
 .warnline{margin-top:10px;padding:9px 12px;border-radius:10px;background:rgba(255,182,72,.12);color:var(--warn);font-size:12px;line-height:1.5}
+/* 눌러서 보는 요소 */
+.click{cursor:pointer;transition:border-color .12s,background .12s}
+.click:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.kpi.click:hover{border-color:var(--c,var(--accent))}
+.k-l{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.k-go{font-size:10.5px;font-weight:700;color:var(--sub);white-space:nowrap}
+.kpi.click:hover .k-go{color:var(--text)}
+.rk.click{margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:10px}
+.rk.click:hover{background:var(--soft)}
+.rk-s.multi{white-space:normal;overflow:visible}
+.tagx.click:hover{background:var(--bad);color:#fff}
+.post.click:hover{background:var(--soft)}
+.post .now{font-size:10px;font-weight:800;color:var(--teal);background:var(--track);border-radius:99px;padding:2px 7px;margin-left:6px}
+.post .see{font-size:11.5px;font-weight:700;color:var(--accent);white-space:nowrap}
+/* 팝업 */
+.mdl{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+.mdl[hidden]{display:none}
+.mdl-box{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(760px,100%);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.mdl.img .mdl-box{width:min(460px,100%)}
+.mdl-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+.mdl-h h3{margin:0;font-size:16px;letter-spacing:-.02em}
+.mdl-h small{display:block;font-size:11.5px;color:var(--sub);font-weight:500;margin-top:3px}
+.mdl-x{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text);font-size:14px;cursor:pointer;flex:none}
+.mdl-x:hover{border-color:var(--accent)}
+.mdl-b{padding:16px 18px 20px;overflow:auto}
+.m-tabs{margin-bottom:14px;flex-wrap:wrap}
+.m-sec{margin-top:18px}
+.m-sec:first-child,.m-tabs+.m-sec{margin-top:0}
+.m-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.m-h b{font-size:13.5px}
+.m-h span{font-size:11px;color:var(--sub)}
+.m-note{font-size:11.5px;color:var(--sub);line-height:1.6;margin:8px 0 0}
+.m-warn{padding:10px 12px;border-radius:10px;background:rgba(255,182,72,.12);color:var(--warn);font-size:12px;line-height:1.6;margin-bottom:12px}
+.pies{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+.pies .m-sec{margin-top:0}
+.pie{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.pie svg{width:170px;height:170px;flex:none}
+.pie .sl.click:hover{opacity:.8}
+.lg{flex:1;min-width:190px;display:grid;gap:2px}
+.lg-r{display:grid;grid-template-columns:12px 1fr auto 44px;align-items:center;gap:8px;font-size:12.5px;padding:5px 7px;border-radius:8px}
+.lg-r i{width:10px;height:10px;border-radius:3px}
+.lg-r span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lg-r b{font-weight:700;white-space:nowrap}
+.lg-r em{font-style:normal;color:var(--sub);font-size:11.5px;text-align:right}
+.lg-r.click:hover{background:var(--soft)}
+.lg-r.on{background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.rvd{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
+.rvd-a{text-align:center}
+.rvd-a b{font-size:34px;letter-spacing:-.03em}
+.rvd-a span{color:var(--sub);font-size:13px;margin-left:4px}
+.rvd-r{display:grid;grid-template-columns:34px 1fr 96px;align-items:center;gap:8px;font-size:12px;padding:3px 0}
+.rvd-r .bar{height:8px;border-radius:99px;background:var(--track);overflow:hidden}
+.rvd-r .bar i{display:block;height:100%;border-radius:99px;background:var(--warn)}
+.rvd-r em{font-style:normal;color:var(--sub);text-align:right}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.ig{width:min(400px,100%);aspect-ratio:4/5;overflow:hidden;position:relative;border-radius:12px;background:#000;margin:0 auto}
+.ig iframe{position:absolute;left:-1px;top:-55px;width:calc(100% + 2px);height:calc(100% + 420px);border:0;background:#fff}
+.ig-f{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin-top:12px}
+.ig-f b{color:var(--text)}
+@media(max-width:560px){.rvd{grid-template-columns:1fr}}
 /* 차트 */
 .chart{position:relative}
 .chart svg{display:block;width:100%;height:auto}
-.hit{cursor:default}
-.tip{position:absolute;pointer-events:none;background:var(--tipbg);color:#fff;border-radius:9px;padding:9px 11px;font-size:11.5px;line-height:1.55;white-space:nowrap;box-shadow:0 8px 22px rgba(0,0,0,.28);transform:translate(-50%,-100%);opacity:0;transition:opacity .1s;z-index:5}
-.tip b{font-size:12px}
-.tip .r{color:#ff8a96;font-weight:800}
-.legend{display:flex;gap:14px;font-size:11px;color:var(--sub);margin-top:6px;flex-wrap:wrap}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .foot{margin-top:26px;color:var(--sub);font-size:11px;line-height:1.75;text-align:center}
 .skel{height:110px;border-radius:14px;background:linear-gradient(90deg,var(--card),var(--track),var(--card));background-size:200% 100%;animation:sk 1.2s infinite}
 @keyframes sk{to{background-position:-200% 0}}
 @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.row.three{grid-template-columns:1fr 1fr}}
-@media(max-width:780px){.row.three,.row.wide,.row.half,.reviews{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{justify-content:center}.k-v{font-size:22px}.funnel{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:780px){.row.three,.row.wide,.row.two{grid-template-columns:1fr}.pies{grid-template-columns:1fr}.post{grid-template-columns:1fr auto;row-gap:4px}.post>span:empty{display:none}.mdl{padding:10px}.mdl-b{padding:14px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{justify-content:center}.k-v{font-size:22px}.funnel{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:420px){.wrap{padding:18px 14px 40px}.plabel{min-width:150px}}
 </style></head><body><div class="wrap">
 <header class="top"><div><h1>CX 통합</h1><div class="sub">고객 반응 · 배송 품질 · SNS 씨딩을 한 장으로 · 매주 금요일 공유</div></div>
@@ -137,7 +186,8 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 <div class="pnav"><button type="button" id="prevBtn" aria-label="이전 기간">‹</button><div class="plabel"><b id="pLabel">—</b><small id="pSub"></small></div><button type="button" id="nextBtn" aria-label="다음 기간">›</button></div></div>
 <div class="banner" id="banner"></div>
 <div id="app"><div class="kpis"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
-<div class="foot">주간 = 전주 금요일 ~ 이번 주 목요일 · 비교는 직전 기간의 같은 일수 기준 · 배송 사고율 = (누락+오배송+분실/파손) ÷ 출고 · 10분마다 자동 갱신<br><a href="https://docs.google.com/spreadsheets/d/1XA6e37oPd0ER8W4o-HM5OIkoETvh3xhugESKKOmWlf8/edit" target="_blank" rel="noopener">고객 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1sRKkaT6xPqsuZ_9fVupcwP-bGWTai4VITCgJNJucTxM/edit" target="_blank" rel="noopener">배송 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1LRc3ip_ak_zuba6RnvQO6U1TkCZV3ctTnFWFPoknPEs/edit" target="_blank" rel="noopener">출고원장 시트 ↗</a></div>
+<div class="mdl" id="mdl" hidden><div class="mdl-box" role="dialog" aria-modal="true" aria-labelledby="mdlT"><div class="mdl-h"><h3 id="mdlT"></h3><button type="button" class="mdl-x" id="mdlX" aria-label="닫기">✕</button></div><div class="mdl-b" id="mdlB"></div></div></div>
+<div class="foot">주간 = 전주 금요일 ~ 이번 주 목요일 · 비교는 직전 기간의 같은 일수 기준 · 배송 사고율 = (누락+오배송+분실/파손) ÷ 출고 · 카드와 순위를 누르면 상세가 열립니다 · 10분마다 자동 갱신<br><a href="https://docs.google.com/spreadsheets/d/1XA6e37oPd0ER8W4o-HM5OIkoETvh3xhugESKKOmWlf8/edit" target="_blank" rel="noopener">고객 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1sRKkaT6xPqsuZ_9fVupcwP-bGWTai4VITCgJNJucTxM/edit" target="_blank" rel="noopener">배송 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1LRc3ip_ak_zuba6RnvQO6U1TkCZV3ctTnFWFPoknPEs/edit" target="_blank" rel="noopener">출고원장 시트 ↗</a></div>
 </div>
 <script>
 (function(){
@@ -149,11 +199,12 @@ const SOURCES=[
  {key:'inquiry',book:'고객',sheets:['고객문의'],need:['문의일','문의 내용']},
  {key:'review',book:'고객',sheets:['리뷰'],need:['리뷰 작성일','별점']},
  {key:'chat',book:'고객',sheets:['채팅상담'],need:['인입일','상담 내용 요약']},
- {key:'weekly',book:'고객',sheets:['주간보고'],need:['구분','기간']},
  /* 씨딩: 성함·전화번호·발송주소·운송장(M,N,O,R열)은 불러오지 않습니다 */
- {key:'seeding',book:'고객',sheets:['SNS 씨딩'],need:['씨딩ID','섭외 상태'],tq:'select A,B,C,D,E,F,G,H,I,J,K,L,P,Q,S,T,U,V,W,X,Y'}
+ {key:'seeding',book:'고객',sheets:['SNS 씨딩'],need:['씨딩ID','섭외 상태'],tq:'select A,B,C,D,E,F,G,H,I,J,K,L,P,Q,S,T,U,V,W,X,Y'},
+ /* 선택: 반품·교환 제품별 내역. 배송 시트에 '반품교환' 탭(접수일 · 구분 · 제품 · 수량)이 생기면 자동으로 읽습니다. 없어도 오류가 아닙니다 */
+ {key:'returns',book:'배송',sheets:['반품교환'],need:['접수일','구분','제품'],optional:true}
 ];
-const LABEL={daily:'배송 › 일자별',incidents:'배송 › 배송사고',orders:'출고원장 › 주문 원장',inquiry:'고객 › 고객문의',review:'고객 › 리뷰',chat:'고객 › 채팅상담',weekly:'고객 › 주간보고',seeding:'고객 › SNS 씨딩'};
+const LABEL={daily:'배송 › 일자별',incidents:'배송 › 배송사고',orders:'출고원장 › 주문 원장',inquiry:'고객 › 고객문의',review:'고객 › 리뷰',chat:'고객 › 채팅상담',seeding:'고객 › SNS 씨딩'};
 const PRODUCT={MKF:'맥세이프 킥프레임',PHS:'PH 스탠드',DSP:'DW 스탠드 플러스',FCB:'프레임케이스 에어범퍼',MCA:'맥세이프케이스 에어'};
 const $=id=>document.getElementById(id);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -171,7 +222,7 @@ function jsonp(url){return new Promise((res,rej)=>{const cb='__gv'+Math.random()
 function tableFromJson(t){const head=t.cols.map(c=>c.label||'');return[head,...t.rows.map(r=>(r.c||[]).map(c=>c?(c.f!=null?c.f:(c.v==null?'':String(c.v))):''))]}
 async function fetchSource(s){
   const variants=[];
-  for(const sh of s.sheets){const base='https://docs.google.com/spreadsheets/d/'+IDS[s.book]+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sh);if(s.tq)variants.push(base+'&tq='+encodeURIComponent(s.tq));variants.push(base,base+'&headers=1&range=A2:AZ')}
+  for(const sh of s.sheets){const base='https://docs.google.com/spreadsheets/d/'+IDS[s.book]+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sh);if(s.tq)variants.push(base+'&tq='+encodeURIComponent(s.tq));variants.push(base);if(!s.optional)variants.push(base+'&headers=1&range=A2:AZ')}
   for(const u of variants){try{const r=await fetch(u+'&_='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;const txt=await r.text();if(/^\s*</.test(txt))throw 0;return toTable(parseCSV(txt),s.need)}catch(e){}}
   for(const u of variants){try{return toTable(tableFromJson(await jsonp(u)),s.need)}catch(e){}}
   throw new Error(s.key);
@@ -189,9 +240,9 @@ function build(T){
   const inquiry=mapRows(T.inquiry,g=>{const d=pdate(g('문의일'));const text=g('문의 내용');if(!d||!text)return null;return{d,src:'문의',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),text}});
   const chat=mapRows(T.chat,g=>{const d=pdate(g('인입일'));const text=g('상담 내용 요약');if(!d||!text)return null;return{d,src:'채팅',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),text}});
   const review=mapRows(T.review,g=>{const d=pdate(g('리뷰 작성일'));const star=num(g('별점'));if(!d||!star)return null;return{d,src:'리뷰',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),star,text:g('리뷰 내용'),memo:g('처리 메모'),imp:!!g('중요')}});
-  const weekly=mapRows(T.weekly,g=>{const m=g('기간').match(/(\d{2,4})\.(\d{1,2})\.(\d{1,2})\s*[-~]\s*(?:(\d{2,4})\.)?(\d{1,2})\.(\d{1,2})/);if(!m)return null;const y=+m[1]<100?2000+ +m[1]:+m[1];const p=(a,b,c)=>a+'-'+String(b).padStart(2,'0')+'-'+String(c).padStart(2,'0');return{start:p(y,m[2],m[3]),end:p(m[4]?(+m[4]<100?2000+ +m[4]:+m[4]):y,m[5],m[6]),label:g('기간'),bad:g('불만 TOP3'),good:g('칭찬 TOP3'),note:g('이상 / 해석')}});
+  const returns=mapRows(T.returns,g=>{const d=pdate(g('접수일'));const type=g('구분');if(!d||!/반품|교환/.test(type))return null;return{d,type,product:g('제품')||'제품 미기재',qty:num(g('수량'))||1}});
   const seeding=mapRows(T.seeding,g=>{const id=g('씨딩ID'),acc=g('계정');if(!/^S-/i.test(id)&&!/^@/.test(acc))return null;const st=g('상태');const posted=pdate(g('실제 게시일'));const ship=g('제품 발송 상태');return{id,camp:g('캠페인')||'캠페인 미기재',acc,fol:num(g('팔로워')),cat:g('카테고리'),confirmed:/완료/.test(g('섭외 상태')),cd:pdate(g('섭외 확정일')),sent:/발송/.test(ship)&&/완료/.test(ship)||!!pdate(g('발송일')),sd:pdate(g('발송일')),due:pdate(g('게시 약속일')),posted:posted||(/게시\s*완료/.test(st)?(pdate(g('발송일'))||''):null),pd:posted,url:g('게시 URL'),likes:num(g('좋아요')),cmts:num(g('댓글')),cost:num(g('원가'))*(num(g('수량'))||1)}});
-  D={daily,incidents,orders,inquiry,chat,review,weekly,seeding};
+  D={daily,incidents,orders,inquiry,chat,review,returns,seeding};
   const shipDays=daily.filter(r=>r.out>0).map(r=>r.d);
   const mn=a=>a.length?a.reduce((x,y)=>x<y?x:y):null;
   FIRST={daily:mn(shipDays)};
@@ -268,60 +319,134 @@ function delta(cur,prev,kind,good){
   const cls=Math.abs(v)<1e-9||!good?'':((good==='low')===(v<0)?'good':'bad');
   return'<div class="k-d '+cls+'">'+txt+'<span>'+CMP+'</span></div>';
 }
-const kpi=(label,value,unit,d,subline,color)=>'<div class="kpi" style="--c:'+color+'"><div class="k-l">'+esc(label)+'</div><div class="k-v">'+esc(value)+'<em>'+esc(unit)+'</em></div>'+d+'<div class="k-s" title="'+esc(subline)+'">'+esc(subline)+'</div></div>';
-const rk=(i,name,val,unit,width,sub,extra)=>'<div class="rk"><div class="rk-h"><span class="rk-no">'+(i+1)+'</span><span class="rk-nm" title="'+esc(name)+'">'+esc(name)+'</span><span class="rk-v">'+fmt(val)+'<small>'+unit+'</small>'+(extra||'')+'</span></div><div class="rk-bar"><i style="width:'+Math.max(4,width)+'%"></i></div>'+(sub?'<div class="rk-s">'+sub+'</div>':'')+'</div>';
+const kpi=(label,value,unit,d,subline,color,open)=>'<div class="kpi click" style="--c:'+color+'" data-open="'+open+'" role="button" tabindex="0" aria-label="'+esc(label)+' 상세 보기"><div class="k-l">'+esc(label)+'<span class="k-go">자세히 ›</span></div><div class="k-v">'+esc(value)+'<em>'+esc(unit)+'</em></div>'+d+'<div class="k-s" title="'+esc(subline)+'">'+esc(subline)+'</div></div>';
+const rk=(i,name,val,unit,width,sub,extra,attr)=>'<div class="rk'+(attr?' click" role="button" tabindex="0" '+attr:'"')+'><div class="rk-h"><span class="rk-no">'+(i+1)+'</span><span class="rk-nm" title="'+esc(name)+'">'+esc(name)+'</span><span class="rk-v">'+fmt(val)+'<small>'+unit+'</small>'+(extra||'')+'</span></div><div class="rk-bar"><i style="width:'+Math.max(4,width)+'%"></i></div>'+(sub?'<div class="rk-s'+(attr?' multi':'')+'">'+sub+'</div>':'')+'</div>';
 const panel=(cls,color,title,right,desc,body)=>'<section class="panel '+cls+'" style="--c:'+color+'"><div class="ph"><h3>'+title+'</h3><span>'+right+'</span></div><p class="pd">'+desc+'</p>'+body+'</section>';
 
 /* 주목할 리뷰 고르기 */
 const PRAISE=[[/세\s?번째|두\s?번째|재구매|또 ?샀|또 ?구매|하나 더|추가 ?구매|\d번째/,'재구매 고객','var(--teal)'],[/목|허리|자세|디스크|어깨|거북/,'구매 동기 · 자세','var(--accent)'],[/회사|직원|사무실|단체|대량/,'B2B 신호','var(--accent2)'],[/선물/,'선물 수요','var(--accent2)'],[/출시|만들어 ?주|있었으면|나왔으면|다시/,'제품 요청','var(--warn)']];
-function pickReviews(rv){
-  const used=new Set(),out=[];const add=(x,tag,color)=>{if(out.length<4&&!used.has(x)){used.add(x);out.push({x,tag,color})}};
-  rv.filter(x=>x.star<=3).sort((a,b)=>a.star-b.star||b.d.localeCompare(a.d)).slice(0,2).forEach(x=>add(x,x.star<=2?'낮은 별점':'개선 신호','var(--bad)'));
-  rv.filter(x=>x.imp&&x.star>3).sort((a,b)=>b.d.localeCompare(a.d)).forEach(x=>{const h=PRAISE.find(p=>p[0].test(x.text));add(x,h?h[1]:'CX 중요 표시',h?h[2]:'var(--warn)')});
-  rv.filter(x=>x.star>=4).map(x=>{const h=PRAISE.find(p=>p[0].test(x.text));return{x,h,s:(h?2:0)+(x.memo?1:0)+Math.min(1,x.text.length/120)}}).filter(o=>o.h||o.x.memo).sort((a,b)=>b.s-a.s).forEach(o=>add(o.x,o.h?o.h[1]:'CX 메모','var(--accent)'));
-  return out;
+const praiseOf=x=>PRAISE.find(p=>p[0].test(x.text));
+function pickLow(rv){return rv.filter(x=>x.star<=3).sort((a,b)=>a.star-b.star||b.d.localeCompare(a.d)).slice(0,10).map(x=>({x,tag:x.star<=2?'낮은 별점':'개선 신호',color:'var(--bad)'}))}
+function pickHigh(rv){
+  return rv.filter(x=>x.star>=4).map(x=>{const h=praiseOf(x);return{x,h,s:(x.imp?3:0)+(h?2:0)+(x.memo?1:0)+Math.min(1,x.text.length/120)}})
+    .sort((a,b)=>b.s-a.s||b.x.d.localeCompare(a.x.d)).slice(0,10)
+    .map(o=>({x:o.x,tag:o.h?o.h[1]:o.x.imp?'CX 중요 표시':o.x.memo?'CX 메모':'상세 후기',color:o.h?o.h[2]:o.x.imp?'var(--warn)':'var(--accent)'}));
+}
+const stars=n=>'<span class="rv-star">'+'★'.repeat(Math.round(n))+'<span style="opacity:.25">'+'★'.repeat(Math.max(0,5-Math.round(n)))+'</span></span>';
+const rvCard=(x,tag,color,full)=>'<div class="rv'+(full?' full':'')+'" style="--c:'+color+'"><div class="rv-h"><span class="rv-tag">'+esc(tag)+'</span>'+(x.star?stars(x.star):'')+'<span class="rv-meta">'+md(x.d)+(x.src&&x.src!=='리뷰'?' · '+esc(x.src):'')+(x.ch?' · '+esc(x.ch):'')+'</span></div><div class="rv-p">'+esc(x.product||'제품 미기재')+(x.opt?' · '+esc(x.opt):'')+'</div><div class="rv-t"'+(full?'':' title="'+esc(x.text)+'"')+'>'+esc(x.text)+'</div>'+(x.memo?'<div class="rv-m">CX 메모 · '+esc(x.memo)+'</div>':'')+'</div>';
+const igPath=u=>{const m=String(u||'').match(/instagram\.com\/(?:[^\/?#]+\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/);return m?(m[1]==='reels'?'reel':m[1])+'/'+m[2]:''};
+
+/* ---------- 차트 조각 (팝업용) ---------- */
+const PAL=['#4c8dff','#20b58b','#ffb648','#8b7bf0','#ff5c6c','#3bb8d8','#e07ad0'];
+const EMPTY=m=>'<div class="empty">'+(m||'이 기간에 기록이 없습니다.')+'</div>';
+function bars(items,o){
+  o=o||{};const f=o.f||fmt,col=o.color||'var(--accent)';
+  if(!items.length||(!o.zero&&!items.some(x=>x.v)))return EMPTY(o.empty);
+  const Wd=560,L=12,R=12,T=24,B=176,hasSub=items.some(x=>x.sub),H=B+(hasSub?42:26),cw=(Wd-L-R)/items.length,bw=Math.min(46,cw*.58),mx=Math.max(1,...items.map(x=>x.v||0));
+  let s='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+B+'" y2="'+B+'" stroke="var(--line)"/>';
+  items.forEach((x,i)=>{const cx=L+cw*i+cw/2,tp=B-(B-T)*(x.v||0)/mx,wt=x.sel?800:500,fc=x.sel?'var(--text)':'var(--sub)';
+    if(x.na)s+='<text x="'+cx+'" y="'+(B-8)+'" text-anchor="middle" font-size="10" fill="var(--sub)">기록 없음</text>';
+    else s+='<rect x="'+(cx-bw/2)+'" y="'+tp+'" width="'+bw+'" height="'+Math.max(1,B-tp)+'" rx="4" fill="'+col+'" opacity="'+(x.sel?1:.5)+'"/><text x="'+cx+'" y="'+(tp-6)+'" text-anchor="middle" font-size="11" font-weight="'+wt+'" fill="'+fc+'">'+f(x.v||0)+'</text>';
+    s+='<text x="'+cx+'" y="'+(B+17)+'" text-anchor="middle" font-size="11" font-weight="'+wt+'" fill="'+fc+'">'+esc(x.lab)+'</text>';
+    if(x.sub&&!x.na)s+='<text x="'+cx+'" y="'+(B+33)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="'+col+'">'+esc(x.sub)+'</text>';
+  });
+  return'<div class="chart"><svg viewBox="0 0 '+Wd+' '+H+'" role="img" aria-label="'+esc(o.label||'월별 추이 막대그래프')+'">'+s+'</svg></div>';
+}
+function line(items,o){
+  o=o||{};const col=o.color||'var(--warn)',pv=items.filter(x=>x.v!=null);
+  if(!pv.length)return EMPTY(o.empty);
+  const Wd=560,L=44,R=14,T=30,B=176,H=B+26,cw=(Wd-L-R)/items.length,mx=Math.max(...pv.map(x=>x.v)),top=Math.max(.01,Math.ceil(mx*1.2/.01)*.01),y=v=>B-(B-T)*v/top;
+  let s='';
+  [0,.5,1].forEach(k=>{const yy=y(top*k);s+='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--'+(k?'grid':'line')+')"'+(k?' stroke-dasharray="3 4"':'')+'/><text x="'+(L-8)+'" y="'+(yy+3)+'" text-anchor="end" font-size="10" fill="var(--sub)">'+(top*k*100).toFixed(1)+'%</text>'});
+  const pts=[];
+  items.forEach((x,i)=>{const cx=L+cw*i+cw/2,wt=x.sel?800:500,fc=x.sel?'var(--text)':'var(--sub)';
+    s+='<text x="'+cx+'" y="'+(B+17)+'" text-anchor="middle" font-size="11" font-weight="'+wt+'" fill="'+fc+'">'+esc(x.lab)+'</text>';
+    if(x.v!=null)pts.push([cx,y(x.v),x]);
+  });
+  if(pts.length>1)s+='<polyline points="'+pts.map(q=>q[0]+','+q[1]).join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round"/>';
+  pts.forEach(([cx,yy,x])=>{s+='<circle cx="'+cx+'" cy="'+yy+'" r="'+(x.sel?5:3.5)+'" fill="var(--card)" stroke="'+col+'" stroke-width="2"/><text x="'+cx+'" y="'+(yy-10)+'" text-anchor="middle" font-size="11" font-weight="'+(x.sel?800:600)+'" fill="'+(x.sel?'var(--text)':'var(--sub)')+'">'+pct(x.v)+'</text>'});
+  return'<div class="chart"><svg viewBox="0 0 '+Wd+' '+H+'" role="img" aria-label="'+esc(o.label||'월별 추이 꺾은선그래프')+'">'+s+'</svg></div>';
+}
+/* entries: [[이름, 값], …] 값 큰 순. o.pick=true면 조각·범례를 눌러 선택 */
+function pie(entries,o){
+  o=o||{};const unit=o.unit||'건',tot=entries.reduce((t,e)=>t+e[1],0);
+  if(!tot)return EMPTY(o.empty);
+  const top=entries.slice(0,7),rest=entries.slice(7),restN=rest.reduce((t,e)=>t+e[1],0);
+  const segs=top.map((e,i)=>({k:e[0],n:e[1],c:PAL[i]}));if(restN)segs.push({k:'기타 '+rest.length+'개',n:restN,c:'var(--sub)',other:true});
+  const C=90,RO=84,RI=50,pt=(r,a)=>(C+r*Math.cos(a)).toFixed(2)+' '+(C+r*Math.sin(a)).toFixed(2);
+  let a=-Math.PI/2,s='';
+  segs.forEach(g=>{const fr=g.n/tot,b=a+fr*Math.PI*2,pk=o.pick&&!g.other,dim=o.sel!=null&&(g.other?!rest.some(e=>e[0]===o.sel):g.k!==o.sel);
+    const at=' fill="'+g.c+'" opacity="'+(dim?.35:1)+'"'+(pk?' class="sl click" data-pick="'+esc(g.k)+'"':' class="sl"')+'><title>'+esc(g.k)+' '+fmt(g.n)+unit+' · '+(fr*100).toFixed(1)+'%</title>';
+    if(fr>.9999)s+='<path fill-rule="evenodd" d="M'+C+' '+(C-RO)+'A'+RO+' '+RO+' 0 1 1 '+(C-.01)+' '+(C-RO)+'ZM'+C+' '+(C-RI)+'A'+RI+' '+RI+' 0 1 0 '+(C+.01)+' '+(C-RI)+'Z"'+at+'</path>';
+    else{const lg=fr>.5?1:0;s+='<path d="M'+pt(RO,a)+'A'+RO+' '+RO+' 0 '+lg+' 1 '+pt(RO,b)+'L'+pt(RI,b)+'A'+RI+' '+RI+' 0 '+lg+' 0 '+pt(RI,a)+'Z" stroke="var(--card)" stroke-width="1.5"'+at+'</path>'}
+    a=b});
+  s+='<text x="'+C+'" y="'+(C-2)+'" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text)">'+fmt(tot)+'</text><text x="'+C+'" y="'+(C+16)+'" text-anchor="middle" font-size="11" fill="var(--sub)">'+esc(o.center||('총 '+unit))+'</text>';
+  const row=(k,n,c,pk)=>'<div class="lg-r'+(pk?' click'+(k===o.sel?' on':'')+'" data-pick="'+esc(k)+'" role="button" tabindex="0':'')+'"><i style="background:'+c+'"></i><span title="'+esc(k)+'">'+esc(k)+'</span><b>'+fmt(n)+unit+'</b><em>'+(n/tot*100).toFixed(1)+'%</em></div>';
+  const lg=segs.filter(g=>!g.other).map(g=>row(g.k,g.n,g.c,o.pick)).join('')+(o.pick?rest.map(e=>row(e[0],e[1],'var(--sub)',true)).join(''):restN?row('기타 '+rest.length+'개',restN,'var(--sub)',false):'');
+  return'<div class="pie"><svg viewBox="0 0 180 180" role="img" aria-label="'+esc(o.label||'비중 원형그래프')+'">'+s+'</svg><div class="lg">'+lg+'</div></div>';
 }
 
-/* 차트: 위 = 출고 막대, 아래 = 사고율(자체 % 눈금) */
-function buckets(mode,p){
-  const list=[];
-  if(mode==='year'){const y=+p.start.slice(0,4);const lastM=y<+LAST.slice(0,4)?11:+LAST.slice(5,7)-1;for(let m=0;m<=lastM;m++){const b=periodOf('month',toS(new Date(y,m,1,12)));list.push({...b,lab:(m+1)+'월',full:y+'년 '+(m+1)+'월'})}}
-  else{const n=mode==='week'?10:12;for(let k=n-1;k>=0;k--){const b=shift(mode,p,-k);if(b.end<(FIRST.any||b.end))continue;list.push({...b,lab:mode==='week'?md(b.start):(+b.start.slice(5,7))+'월',full:mode==='week'?mdw(b.start)+' – '+mdw(b.end):b.start.slice(0,4)+'년 '+(+b.start.slice(5,7))+'월',sel:k===0})}}
-  return list.map(b=>{const r={start:b.start,end:minS(b.end,LAST)};const m=r.end>=r.start?metrics(r):{out:0,inc:0,incRate:null,miss:0,wrong:0,dmg:0};return{...b,out:m.out,inc:m.inc,miss:m.miss,wrong:m.wrong,dmg:m.dmg,rate:m.incRate,partial:b.end>LAST&&b.start<=LAST}});
+/* ---------- 팝업 내용 ---------- */
+let CTX=null,M=null;
+const sec=(t,r,body)=>'<div class="m-sec"><div class="m-h"><b>'+t+'</b>'+(r?'<span>'+r+'</span>':'')+'</div>'+body+'</div>';
+const mtabs=(list,cur)=>'<div class="seg m-tabs">'+list.map(([k,l])=>'<button type="button" data-tab="'+k+'" class="'+(k===cur?'active':'')+'">'+l+'</button>').join('')+'</div>';
+/* 선택한 기간이 속한 해의 1월 ~ 선택한 달 (연간 누적은 마지막 기록 달까지) */
+function months(){
+  if(CTX.ms)return CTX.ms;
+  const y=+CTX.y,year=CTX.mode==='year',selM=+CTX.cur.end.slice(5,7)-1,lastM=year?(y<+LAST.slice(0,4)?11:+LAST.slice(5,7)-1):selM,a=[];
+  for(let m=0;m<=lastM;m++){const b=periodOf('month',toS(new Date(y,m,1,12))),r={start:b.start,end:minS(b.end,LAST)};a.push({lab:(m+1)+'월',sel:!year&&m===selM,r:b,m:r.end>=r.start?metrics(r):{}})}
+  return CTX.ms=a;
 }
-function chartSVG(bs){
-  if(!bs.length||!bs.some(b=>b.out))return'<div class="empty">이 기간에 입력된 출고 기록이 없습니다.</div>';
-  const Wd=520,L=40,R=10,BT=24,BB=150,LY=170,RT=196,RB=250,H=262,cw=(Wd-L-R)/bs.length,bw=Math.min(40,cw*.56);
-  const maxO=Math.max(1,...bs.map(b=>b.out)),maxRate=Math.max(0,...bs.map(b=>b.rate||0));
-  const top=Math.max(.01,Math.ceil(maxRate*1.25/.005)*.005); // 0.5% 단위, 최소 1%
-  const y=v=>BB-(BB-BT)*v/maxO,yr=v=>RB-(RB-RT)*v/top;
-  let s='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+BB+'" y2="'+BB+'" stroke="var(--line)"/>';
-  s+='<text x="'+(L-8)+'" y="'+(BT+4)+'" text-anchor="end" font-size="10" fill="var(--sub)">'+fmt(maxO)+'</text><text x="'+(L-8)+'" y="'+(BB)+'" text-anchor="end" font-size="10" fill="var(--sub)">0</text>';
-  s+='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+RT+'" y2="'+RT+'" stroke="var(--grid)" stroke-dasharray="3 4"/><line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+RB+'" y2="'+RB+'" stroke="var(--line)"/>';
-  s+='<text x="'+(L-8)+'" y="'+(RT+4)+'" text-anchor="end" font-size="10" fill="var(--sub)">'+(top*100).toFixed(1)+'%</text><text x="'+(L-8)+'" y="'+(RB+3)+'" text-anchor="end" font-size="10" fill="var(--sub)">0%</text>';
-  s+='<text x="'+L+'" y="'+(RT-8)+'" font-size="10.5" font-weight="700" fill="var(--sub)">배송 사고율</text>';
-  const pts=[];
-  bs.forEach((b,i)=>{const cx=L+cw*i+cw/2,tp=y(b.out);
-    s+='<rect x="'+(cx-bw/2)+'" y="'+tp+'" width="'+bw+'" height="'+Math.max(1,BB-tp)+'" rx="4" fill="'+(b.sel?'url(#gsel)':'var(--accent)')+'" opacity="'+(b.sel?1:b.partial?.35:.5)+'"/>';
-    if(b.out)s+='<text x="'+cx+'" y="'+(tp-6)+'" text-anchor="middle" font-size="10.5" font-weight="'+(b.sel?800:500)+'" fill="'+(b.sel?'var(--text)':'var(--sub)')+'">'+fmt(b.out)+'</text>';
-    s+='<text x="'+cx+'" y="'+LY+'" text-anchor="middle" font-size="10.5" font-weight="'+(b.sel?800:500)+'" fill="'+(b.sel?'var(--text)':'var(--sub)')+'">'+esc(b.lab)+'</text>';
-    if(b.rate!=null)pts.push([cx,yr(b.rate),b]);
-  });
-  if(pts.length>1)s+='<polyline points="'+pts.map(p=>p[0]+','+p[1]).join(' ')+'" fill="none" stroke="var(--bad)" stroke-width="1.8" stroke-linejoin="round"/>';
-  pts.forEach(([x,yy,b])=>{s+='<circle cx="'+x+'" cy="'+yy+'" r="'+(b.sel?4.5:3)+'" fill="var(--card)" stroke="var(--bad)" stroke-width="2"/>';if(b.sel)s+='<text x="'+x+'" y="'+(yy-8)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="var(--bad)">'+pct(b.rate)+'</text>'});
-  bs.forEach((b,i)=>{s+='<rect class="hit" data-i="'+i+'" x="'+(L+cw*i)+'" y="0" width="'+cw+'" height="'+H+'" fill="transparent"/>'});
-  return'<div class="chart"><svg viewBox="0 0 '+Wd+' '+H+'" role="img" aria-label="출고와 배송 사고율 추이"><defs><linearGradient id="gsel" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent2)"/></linearGradient></defs>'+s+'</svg><div class="tip" id="tip"></div></div><div class="legend"><span><i style="background:var(--accent)"></i>출고 건수</span><span><i style="background:var(--bad);height:3px;border-radius:2px;vertical-align:3px"></i>배송 사고율 (아래 칸, 0~'+(top*100).toFixed(1)+'% 눈금)</span></div>';
-}
-function bindChart(bs){
-  const box=document.querySelector('.chart'),tip=$('tip');if(!box||!tip)return;
-  const svg=box.querySelector('svg');
-  const show=el=>{const b=bs[+el.dataset.i],r=el.getBoundingClientRect(),br=box.getBoundingClientRect();
-    tip.innerHTML='<b>'+esc(b.full)+'</b>'+(b.partial?' · 집계 중':'')+'<br>출고 '+fmt(b.out)+'건<br>배송사고 '+fmt(b.inc)+'건 (누락 '+b.miss+' · 오배송 '+b.wrong+' · 파손 '+b.dmg+')<br>출고 대비 사고율 <span class="r">'+(b.rate==null?'—':pct(b.rate))+'</span>';
-    let x=r.left-br.left+r.width/2;const half=tip.offsetWidth/2;x=Math.max(half,Math.min(br.width-half,x));
-    tip.style.left=x+'px';tip.style.top=(svg.getBoundingClientRect().height*0.30)+'px';tip.style.opacity=1;};
-  box.querySelectorAll('.hit').forEach(el=>{el.addEventListener('mouseenter',()=>show(el));el.addEventListener('click',()=>show(el))});
-  box.addEventListener('mouseleave',()=>{tip.style.opacity=0});
-}
+const rangeLab=()=>{const n=months().length;return CTX.y+'년 '+(n>1?'1월 ~ '+n+'월':'1월')+(months()[n-1].r.end>LAST?' · '+n+'월은 '+md(LAST)+'까지 집계':'')};
+const mser=(k,extra)=>months().map(x=>Object.assign({lab:x.lab,sel:x.sel,v:x.m[k]||0},extra?extra(x):null));
+const byProduct=list=>{const o={};list.forEach(x=>inc1(o,x.product||'제품 미기재',x.qty||1));return topN(o,999)};
+const MODALS={
+  out(){const tot=months().reduce((t,x)=>t+(x.m.out||0),0);
+    return{t:'출고 추이',s:rangeLab(),h:sec('월별 출고 건수','누적 '+fmt(tot)+'건',bars(mser('out'),{label:'월별 출고 건수'}))}},
+  inc(){const rate=k=>x=>({sub:x.m.out?pct((x.m[k]||0)/x.m.out):''});
+    return{t:'배송 사고 추이',s:rangeLab(),h:sec('사고 건수','누락 + 오배송 + 분실/파손 · 아래 %는 출고 대비 사고율',bars(mser('inc',rate('inc')),{color:'var(--bad)',zero:true,label:'월별 배송 사고 건수와 사고율'}))
+      +sec('누락 건수','아래 %는 출고 대비 누락률',bars(mser('miss',rate('miss')),{color:'var(--warn)',zero:true,label:'월별 누락 건수와 누락률'}))}},
+  re(){const tab=M.tab==='ret'||M.tab==='exch'?M.tab:'rate',c=CTX.c;
+    let h=mtabs([['rate','반품·교환율'],['ret','반품'],['exch','교환']],tab);
+    if(tab==='rate')h+=sec('월별 반품·교환율','(반품 + 교환) ÷ 출고',line(months().map(x=>({lab:x.lab,sel:x.sel,v:x.m.out?x.m.reRate:null})),{label:'월별 반품·교환율'}));
+    else{const nm=tab==='ret'?'반품':'교환',n=c[tab],re=tab==='ret'?/반품/:/교환/,col=tab==='ret'?'var(--warn)':'var(--accent2)';
+      h+=sec('월별 '+nm+' 건수','',bars(mser(tab),{color:col,zero:true,label:'월별 '+nm+' 건수'}));
+      let body;
+      if(D.returns.length){const ents=byProduct(D.returns.filter(x=>inR(x.d,CTX.cur)&&re.test(x.type))),sum=ents.reduce((t,e)=>t+e[1],0);
+        body=pie(ents,{label:nm+' 제품별 비중',empty:'이 기간 반품교환 탭에 기록된 '+nm+' 건이 없습니다.'})+(sum!==n?'<p class="m-note">일자별 탭의 '+nm+' '+fmt(n)+'건과 반품교환 탭의 '+fmt(sum)+'건이 다릅니다. 두 탭을 확인해 주세요.</p>':'')}
+      else{const kw=tab==='ret'?/반품|환불/:/교환|교품/,ents=byProduct(c.asks.filter(x=>kw.test(x.text))),sum=ents.reduce((t,e)=>t+e[1],0);
+        body='<div class="m-warn">'+nm+' '+fmt(n)+'건이 어떤 제품인지는 아직 시트에 없습니다. 배송 시트 일자별 탭에는 날짜별 건수만 있습니다.<br>배송 시트에 <b>반품교환</b> 탭(접수일 · 구분 · 제품 · 수량)을 만들어 기록하면 여기에 '+fmt(n)+'건의 제품 비중이 자동으로 나옵니다.</div>'
+          +'<div class="m-h"><b>참고 · 문의·상담에서 '+nm+'이 언급된 제품</b><span>'+fmt(sum)+'건 · 실제 '+nm+' 건수와 다릅니다</span></div>'+pie(ents,{label:nm+' 언급 제품 비중',empty:'이 기간 문의·상담에서 '+nm+'이 언급된 건이 없습니다.'})}
+      h+=sec(CTX.pl+' '+nm+' '+fmt(n)+'건 · 제품 비중','',body)}
+    return{t:'반품 · 교환 추이',s:rangeLab(),h}},
+  voice(){const tab=M.tab==='inq'||M.tab==='chat'?M.tab:'all',k=tab==='all'?'voice':tab,nm=tab==='all'?'문의·상담':tab==='inq'?'게시판 문의':'채팅 상담';
+    const first=tab==='inq'?FIRST.inquiry:tab==='chat'?FIRST.chat:[FIRST.inquiry,FIRST.chat].filter(Boolean).sort()[0],ms=months();
+    const items=ms.map(x=>({lab:x.lab,sel:x.sel,v:x.m[k]||0,na:!first||x.r.end<first}));
+    const sum=q=>ms.reduce((t,x)=>t+(x.m[q]||0),0),c=CTX.c,pp=(a,b,lab)=>pie([['게시판 문의',a],['채팅 상담',b]].sort((x,y)=>y[1]-x[1]),{label:lab+' 게시판 문의와 채팅 상담 비중'});
+    return{t:'고객 문의 · 상담 추이',s:rangeLab(),h:mtabs([['all','전체'],['inq','게시판 문의'],['chat','채팅 상담']],tab)
+      +sec('월별 '+nm+' 건수','',bars(items,{color:'var(--teal)',zero:true,label:'월별 '+nm+' 건수'})+(items.some(x=>x.na)&&first?'<p class="m-note">고객 시트는 '+md(first)+'부터 기록되어 있어 그 전 달은 비어 있습니다.</p>':''))
+      +'<div class="pies">'+sec(CTX.pl+' 비중','',pp(c.inq,c.chat,CTX.pl))+sec(CTX.y+'년 '+(ms.length>1?'1 ~ '+ms.length+'월 ':'')+'누적 비중','',pp(sum('inq'),sum('chat'),'누적'))+'</div>'}},
+  review(){const rv=CTX.c.rv,key=x=>x.product||'제품 미기재',by={};rv.forEach(x=>inc1(by,key(x)));const ents=topN(by,999);
+    if(!ents.length)return{t:'리뷰 상세',s:CTX.pl,h:EMPTY('이 기간에 등록된 리뷰가 없습니다.')};
+    const sel=by[M.arg]?M.arg:ents[0][0],list=rv.filter(x=>key(x)===sel),avg=list.reduce((t,x)=>t+x.star,0)/list.length;
+    const low=list.filter(x=>x.star<=3).sort((a,b)=>a.star-b.star||b.d.localeCompare(a.d));
+    const dist=[5,4,3,2,1].map(st=>{const n=list.filter(x=>Math.round(x.star)===st).length;return'<div class="rvd-r"><span>'+st+'점</span><div class="bar"><i style="width:'+(n/list.length*100)+'%"></i></div><em>'+n+'건 · '+(n/list.length*100).toFixed(0)+'%</em></div>'}).join('');
+    return{t:'리뷰 상세',s:CTX.pl+' 리뷰 '+fmt(rv.length)+'건',h:sec('제품별 비중','제품을 누르면 아래에 평점이 나옵니다',pie(ents,{pick:true,sel,label:'리뷰 제품별 비중'}))
+      +sec(esc(sel),'리뷰 '+fmt(list.length)+'건 · 전체의 '+(list.length/rv.length*100).toFixed(1)+'%','<div class="rvd"><div class="rvd-a"><b>'+avg.toFixed(2)+'</b><span>/ 5</span><div>'+stars(avg)+'</div></div><div>'+dist+'</div></div>')
+      +sec('3점 이하 리뷰',low.length+'건',low.length?'<div class="rvlist" style="max-height:none">'+low.map(x=>rvCard(x,x.star+'점','var(--bad)',true)).join('')+'</div>':EMPTY('이 제품은 3점 이하 리뷰가 없습니다.'))}},
+  issue(){const t=M.arg,ents=topN(CTX.prod[t]||{},999);
+    return{t:'고객 이슈 · '+t,s:CTX.pl+' · '+fmt(CTX.tally[t]||0)+'건',h:sec('제품별 비중','게시판 문의 · 채팅 상담 · 3점 이하 리뷰',pie(ents,{label:t+' 제품별 비중'}))}},
+  prod(){const k=M.arg,name=CTX.names[k]||k,tab=M.tab==='iss'?'iss':'opt',vs=CTX.c.voices.filter(x=>pkey(x.product)===pkey(name)).sort((a,b)=>b.d.localeCompare(a.d));
+    let h=mtabs([['opt','옵션별 판매 비중'],['iss','고객 이슈 '+vs.length+'건']],tab);
+    if(tab==='opt'){const o=Object.assign({},CTX.oo[k]||{}),tot=CTX.og[k]||0,known=Object.values(o).reduce((a,b)=>a+b,0);if(tot>known)o['옵션 미기재']=tot-known;
+      h+=sec('옵션별 판매 비중','출고 수량 '+fmt(tot)+'개',pie(topN(o,999),{unit:'개',label:name+' 옵션별 판매 비중'}))}
+    else{const tp={};vs.forEach(x=>inc1(tp,topicOf(x.text)));
+      h+=sec('고객 이슈 세부 내역','게시판 문의 · 채팅 상담 · 3점 이하 리뷰',vs.length?'<div class="chips">'+topN(tp,99).map(a=>'<span class="pill">'+esc(a[0])+' '+a[1]+'건</span>').join('')+'</div><div class="rvlist" style="max-height:none">'+vs.map(x=>rvCard(x,topicOf(x.text),'var(--bad)',true)).join('')+'</div>':EMPTY('이 기간 이 제품으로 접수된 고객 이슈가 없습니다.'))}
+    return{t:name,s:CTX.pl,h}},
+  post(){const x=CTX.posts[+M.arg];if(!x)return{t:'게시물',s:'',h:EMPTY('게시물을 찾을 수 없습니다.')};
+    return{t:x.acc,s:'팔로워 '+fmt(x.fol)+(x.pd?' · '+md(x.pd)+' 게시':''),img:true,h:'<div class="ig"><iframe src="https://www.instagram.com/'+igPath(x.url)+'/embed/" title="'+esc(x.acc)+' 인스타그램 게시물" scrolling="no" loading="lazy"></iframe></div><div class="ig-f"><span>♥ <b>'+fmt(x.likes)+'</b> · 💬 <b>'+fmt(x.cmts)+'</b></span><a href="'+esc(x.url)+'" target="_blank" rel="noopener">인스타그램에서 열기 ↗</a></div>'}}
+};
+function drawM(){if(!M||!CTX)return;const r=MODALS[M.type]();$('mdlT').innerHTML=esc(r.t)+(r.s?'<small>'+esc(r.s)+'</small>':'');$('mdlB').innerHTML=r.h;$('mdl').classList.toggle('img',!!r.img)}
 
 /* ---------- 메인 렌더 ---------- */
 function render(){
@@ -344,18 +469,18 @@ function render(){
   const cmpVoice=cd('inquiry'),cmpOrders=cd('orders');
 
   /* KPI */
-  const tiles=kpi('출고',fmt(c.out),'건',delta(c.out,cd('daily')?v.out:null,'count',null),'자사몰 '+fmt(c.own)+' · 쿠팡 '+fmt(c.cp),'#4c8dff')
-   +kpi('배송 사고율',c.incRate==null?'—':pct(c.incRate),'',delta(c.incRate,cd('daily')?v.incRate:null,'rate','low'),'사고 '+fmt(c.inc)+'건 · 누락 '+c.miss+' · 오배송 '+c.wrong+' · 파손 '+c.dmg,'#ff5c6c')
-   +kpi('반품·교환율',c.reRate==null?'—':pct(c.reRate),'',delta(c.reRate,cd('daily')?v.reRate:null,'rate','low'),'반품 '+fmt(c.ret)+'건 · 교환 '+fmt(c.exch)+'건','#ffb648')
-   +kpi('고객 문의·상담',fmt(c.voice),'건',delta(c.voice,cmpVoice?v.voice:null,'count',null),'게시판 문의 '+c.inq+' · 채팅 상담 '+c.chat,'#20b58b')
-   +kpi('리뷰 평점',c.avg==null?'—':c.avg.toFixed(2),c.avg==null?'':'/ 5',delta(c.avg,cd('review')?v.avg:null,'avg','high'),'리뷰 '+fmt(c.reviews)+'건 · 3점 이하 '+c.low+'건','#8b7bf0');
+  const tiles=kpi('출고',fmt(c.out),'건',delta(c.out,cd('daily')?v.out:null,'count',null),'자사몰 '+fmt(c.own)+' · 쿠팡 '+fmt(c.cp),'#4c8dff','out')
+   +kpi('배송 사고율',c.incRate==null?'—':pct(c.incRate),'',delta(c.incRate,cd('daily')?v.incRate:null,'rate','low'),'사고 '+fmt(c.inc)+'건 · 누락 '+c.miss+' · 오배송 '+c.wrong+' · 파손 '+c.dmg,'#ff5c6c','inc')
+   +kpi('반품·교환율',c.reRate==null?'—':pct(c.reRate),'',delta(c.reRate,cd('daily')?v.reRate:null,'rate','low'),'반품 '+fmt(c.ret)+'건 · 교환 '+fmt(c.exch)+'건','#ffb648','re')
+   +kpi('고객 문의·상담',fmt(c.voice),'건',delta(c.voice,cmpVoice?v.voice:null,'count',null),'게시판 문의 '+c.inq+' · 채팅 상담 '+c.chat,'#20b58b','voice')
+   +kpi('리뷰 평점',c.avg==null?'—':c.avg.toFixed(2),c.avg==null?'':'/ 5',delta(c.avg,cd('review')?v.avg:null,'avg','high'),'리뷰 '+fmt(c.reviews)+'건 · 3점 이하 '+c.low+'건','#8b7bf0','review');
 
   /* 1. 고객 이슈 */
-  const tally={},prod={},ex={},ptally={};
-  c.voices.forEach(x=>{const t=topicOf(x.text);inc1(tally,t);inc1(prod[t]=prod[t]||{},x.product||'제품 미기재');if(!ex[t]||x.d>ex[t].d)ex[t]=x});
+  const tally={},prod={},ptally={};
+  c.voices.forEach(x=>{const t=topicOf(x.text);inc1(tally,t);inc1(prod[t]=prod[t]||{},x.product||'제품 미기재')});
   v.voices.forEach(x=>inc1(ptally,topicOf(x.text)));
   const tops=topN(tally,5),tot=c.voices.length;
-  const issues=tops.length?tops.map(([t,n],i)=>{const pp=topN(prod[t],2);const e=ex[t];return rk(i,t,n,'건',n/tops[0][1]*100,'<b>'+esc(pp.map(a=>a[0]+' '+a[1]).join(' · '))+'</b> — “'+esc(e.text.slice(0,48))+'”',chgTag(n,ptally[t]||0,cmpVoice,'issue'))}).join(''):'<div class="empty">'+(FIRST.inquiry&&FIRST.inquiry<=cur.end?'이 기간에 접수된 고객 이슈가 없습니다.':'고객 탭은 '+(FIRST.inquiry?md(FIRST.inquiry):'—')+'부터 기록되어 있습니다.')+'</div>';
+  const issues=tops.length?tops.map(([t,n],i)=>rk(i,t,n,'건',n/tops[0][1]*100,'<b>'+esc(topN(prod[t],99).map(a=>a[0]+' '+a[1]+'건').join(' · '))+'</b>',chgTag(n,ptally[t]||0,cmpVoice,'issue'),'data-open="issue" data-arg="'+esc(t)+'" aria-label="'+esc(t)+' 제품별 비중 보기"')).join(''):'<div class="empty">'+(FIRST.inquiry&&FIRST.inquiry<=cur.end?'이 기간에 접수된 고객 이슈가 없습니다.':'고객 탭은 '+(FIRST.inquiry?md(FIRST.inquiry):'—')+'부터 기록되어 있습니다.')+'</div>';
 
   /* 2. 재입고 */
   const rs={},rtags={},prs={};
@@ -369,16 +494,12 @@ function render(){
   c.orders.forEach(x=>{const k=prodGroup(x.code);inc1(og,k,x.qty);const nm=cleanName(x.name);if(nm)inc1(on[k]=on[k]||{},nm,x.qty);const o=optOf(x.code);if(o)inc1(oo[k]=oo[k]||{},o,x.qty)});
   v.orders.forEach(x=>inc1(po,prodGroup(x.code),x.qty));
   const voiceByProd={};c.voices.forEach(x=>inc1(voiceByProd,pkey(x.product)));
-  const otop=topN(og,5),otot=Object.values(og).reduce((a,b)=>a+b,0);
-  const sales=otop.length?otop.map(([k,n],i)=>{const name=PRODUCT[k]||(on[k]?topN(on[k],1)[0][0]:k);const opts=oo[k]?topN(oo[k],3).map(a=>a[0]+' '+Math.round(a[1]/n*100)+'%').join(' · '):'';const iss=voiceByProd[pkey(name)]||0;return rk(i,name,n,'개',n/otop[0][1]*100,'전체의 <b>'+Math.round(n/otot*100)+'%</b>'+(opts?' · '+esc(opts):'')+(iss?'<span class="tagx">고객 이슈 '+iss+'건</span>':''),chgTag(n,po[k]||0,cmpOrders,'sales'))}).join(''):'<div class="empty">이 기간 주문 원장 기록이 없습니다.</div>';
+  const otop=topN(og,5),otot=Object.values(og).reduce((a,b)=>a+b,0),names={};
+  const sales=otop.length?otop.map(([k,n],i)=>{const name=names[k]=PRODUCT[k]||(on[k]?topN(on[k],1)[0][0]:k);const opts=oo[k]?topN(oo[k],3).map(a=>a[0]+' '+Math.round(a[1]/n*100)+'%').join(' · '):'';const iss=voiceByProd[pkey(name)]||0;return rk(i,name,n,'개',n/otop[0][1]*100,'전체의 <b>'+Math.round(n/otot*100)+'%</b>'+(opts?' · '+esc(opts):'')+(iss?'<span class="tagx click" data-open="prod" data-arg="'+esc(k)+'" data-tab="iss" role="button" tabindex="0">고객 이슈 '+iss+'건 ›</span>':''),chgTag(n,po[k]||0,cmpOrders,'sales'),'data-open="prod" data-arg="'+esc(k)+'" aria-label="'+esc(name)+' 옵션별 판매 비중 보기"')}).join(''):'<div class="empty">이 기간 주문 원장 기록이 없습니다.</div>';
 
-  /* 주목할 리뷰 */
-  const picks=pickReviews(c.rv);
-  const reviewsHtml=picks.length?'<div class="reviews">'+picks.map(({x,tag,color})=>'<div class="rv" style="--c:'+color+'"><div class="rv-h"><span class="rv-tag">'+esc(tag)+'</span><span class="rv-star">'+'★'.repeat(Math.round(x.star))+'<span style="opacity:.25">'+'★'.repeat(Math.max(0,5-Math.round(x.star)))+'</span></span><span class="rv-meta">'+md(x.d)+' · '+esc(x.ch||'')+'</span></div><div class="rv-p">'+esc(x.product)+'</div><div class="rv-t" title="'+esc(x.text)+'">'+esc(x.text)+'</div>'+(x.memo?'<div class="rv-m">CX 메모 · '+esc(x.memo)+'</div>':'')+'</div>').join('')+'</div>':'<div class="empty">이 기간에는 따로 짚어볼 리뷰가 없습니다.</div>';
-
-  /* CX 코멘트 */
-  const wk=D.weekly.filter(w=>w.start<=cur.end&&w.end>=cur.start&&(w.note||w.bad)).sort((a,b)=>b.start.localeCompare(a.start))[0];
-  const noteHtml=wk?'<div class="note"><span class="tag">주간보고 '+esc(wk.label)+'</span><dl>'+(wk.note?'<dt>해석</dt><dd>'+esc(wk.note)+'</dd>':'')+(wk.bad?'<dt>불만 TOP3</dt><dd>'+esc(wk.bad)+'</dd>':'')+(wk.good?'<dt>칭찬 TOP3</dt><dd>'+esc(wk.good)+'</dd>':'')+'</dl></div>':'<div class="empty">이 기간 주간보고 코멘트가 아직 없습니다.</div>';
+  /* 주목할 리뷰: 낮은 별점 10 · 높은 별점 10 */
+  const lows=pickLow(c.rv),highs=pickHigh(c.rv);
+  const rvList=(a,msg)=>a.length?'<div class="rvlist">'+a.map(o=>rvCard(o.x,o.tag,o.color)).join('')+'</div>':'<div class="empty">'+msg+'</div>';
 
   /* SNS 씨딩 */
   const sd=D.seeding,camps={};
@@ -386,17 +507,17 @@ function render(){
   const lastAct=a=>a.map(x=>x.pd||x.sd||x.cd||'').reduce((m,d)=>d>m?d:m,'');
   const campList=Object.entries(camps).sort((a,b)=>lastAct(b[1]).localeCompare(lastAct(a[1])));
   const overdue=sd.filter(x=>x.sent&&!x.posted&&x.due&&x.due<TODAY);
-  let seedHtml='<div class="empty">SNS 씨딩 기록이 없습니다.</div>';
+  let seedHtml='<div class="empty">SNS 씨딩 기록이 없습니다.</div>',posts=[];
   if(campList.length){
     const [cname,rows]=campList[0];
     const N=rows.length,conf=rows.filter(x=>x.confirmed).length,sent=rows.filter(x=>x.sent).length,posted=rows.filter(x=>x.posted).length;
     const reach=rows.filter(x=>x.posted).reduce((t,x)=>t+x.fol,0),eng=rows.reduce((t,x)=>t+x.likes+x.cmts,0),cost=rows.filter(x=>x.sent).reduce((t,x)=>t+x.cost,0);
     const fs=(l,n,base,extra)=>'<div class="fs"><span>'+l+'</span><b>'+n+'<small>'+(extra||'명')+'</small></b><i style="width:'+(base?n/base*100:0)+'%"></i></div>';
-    const newPosts=rows.filter(x=>x.pd&&inR(x.pd,cur)).sort((a,b)=>(b.likes+b.cmts)-(a.likes+a.cmts));
+    posts=rows.filter(x=>x.posted).sort((a,b)=>(b.pd||'').localeCompare(a.pd||'')||(b.likes+b.cmts)-(a.likes+a.cmts));
     seedHtml='<div class="camp">'+esc(cname)+'<span>캠페인 누적 · '+(campList.length>1?'외 '+(campList.length-1)+'개 캠페인':'진행 중')+'</span></div>'
       +'<div class="funnel">'+fs('섭외 후보',N,N)+fs('섭외 완료',conf,N)+fs('제품 발송',sent,N)+fs('게시 완료',posted,N,'명 · '+(sent?Math.round(posted/sent*100):0)+'%')+'</div>'
       +'<div class="sdstat"><span>게시 계정 도달<b>'+fmt(reach)+'</b></span><span>좋아요+댓글<b>'+fmt(eng)+'</b></span><span>발송 제품 원가<b>₩'+fmt(cost)+'</b></span>'+(eng&&cost?'<span>반응 1건당<b>₩'+fmt(cost/eng)+'</b></span>':'')+'</div>'
-      +(newPosts.length?newPosts.slice(0,4).map(x=>'<div class="post"><span><b>'+esc(x.acc)+'</b><small>팔로워 '+fmt(x.fol)+' · '+md(x.pd)+' 게시</small></span><span class="eng">♥ '+fmt(x.likes)+' · 💬 '+fmt(x.cmts)+'</span>'+(/^https?:\/\//.test(x.url)?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">게시물 ↗</a>':'<span></span>')+'</div>').join(''):'<div class="pd" style="margin:4px 0 0">이 기간 새로 올라온 게시물은 없습니다.</div>')
+      +(posts.length?posts.map((x,i)=>{const ig=igPath(x.url);return'<div class="post'+(ig?' click" data-open="post" data-arg="'+i+'" role="button" tabindex="0" aria-label="'+esc(x.acc)+' 게시물 이미지 보기':'')+'"><span><b>'+esc(x.acc)+'</b><small>팔로워 '+fmt(x.fol)+(x.pd?' · '+md(x.pd)+' 게시':'')+'</small>'+(x.pd&&inR(x.pd,cur)?'<span class="now">이번 '+unit+'</span>':'')+'</span><span class="eng">♥ '+fmt(x.likes)+' · 💬 '+fmt(x.cmts)+'</span>'+(ig?'<span class="see">이미지 보기</span>':'<span></span>')+(/^https?:\/\//.test(x.url)?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">게시물 ↗</a>':'<span></span>')+'</div>'}).join(''):'<div class="pd" style="margin:4px 0 0">아직 게시된 계정이 없습니다.</div>')
       +(overdue.length?'<div class="warnline">게시 약속일이 지났는데 아직 미게시 <b>'+overdue.length+'명</b> · '+esc(overdue.slice(0,4).map(x=>x.acc).join(', '))+(overdue.length>4?' 외 '+(overdue.length-4)+'명':'')+'</div>':'');
   }
 
@@ -414,7 +535,6 @@ function render(){
   if(overdue.length)pills.push('<span class="pill warn">씨딩 게시 지연 '+overdue.length+'명</span>');
   if(!pills.length)pills.push('<span class="pill">긴급 확인 항목 없음</span>');
 
-  const bs=buckets(mode,p);
   $('app').innerHTML='<div class="brief"><p><span class="lab">'+(mode==='week'?'이번 주 요약':mode==='month'?'이번 달 요약':'올해 누적 요약')+'</span>'+brief+'</p><div class="pills">'+pills.join('')+'</div></div>'
    +'<div class="kpis">'+tiles+'</div>'
    +'<div class="sec"><h2>이번 '+unit+' 꼭 볼 3가지</h2><span>'+(cmpVoice||cmpOrders?'오른쪽 작은 숫자는 '+prevName+' 대비 증감':'')+'</span></div>'
@@ -423,13 +543,13 @@ function render(){
    +panel('hero','var(--warn)','재입고 요청 TOP','총 '+rtot+'건','재고가 없어 놓치고 있는 수요입니다.',restock)
    +panel('hero','var(--accent)','많이 나간 제품 TOP 5',fmt(otot)+'개','주문 원장 출고 수량 · 옵션 합산',sales)
    +'</div>'
-   +'<div class="sec"><h2>고객의 목소리</h2><span>함께 읽어볼 리뷰와 CX팀 해석</span></div>'
-   +'<div class="row wide">'+panel('','var(--accent)','이번 '+unit+' 주목할 리뷰',picks.length+'건','낮은 별점, 재구매·구매 동기·B2B 신호 등 다른 팀이 활용할 만한 리뷰를 골랐습니다.',reviewsHtml)
-   +panel('','var(--accent)','CX팀 코멘트','주간보고','CX팀이 직접 남긴 해석입니다.',noteHtml)+'</div>'
+   +'<div class="sec"><h2>고객의 목소리</h2><span>낮은 별점과 높은 별점에서 각각 최대 10건</span></div>'
+   +'<div class="row two">'+panel('','var(--bad)','낮은 별점 리뷰',lows.length+'건','3점 이하 리뷰를 별점이 낮은 순으로 모았습니다.',rvList(lows,'이 기간에는 3점 이하 리뷰가 없습니다.'))
+   +panel('','var(--accent)','높은 별점 주목할 리뷰',highs.length+'건','4점 이상 중 재구매 · 구매 동기 · B2B 신호 등 다른 팀이 활용할 만한 리뷰입니다.',rvList(highs,'이 기간에는 4점 이상 리뷰가 없습니다.'))+'</div>'
    +'<div class="sec"><h2>운영 · 마케팅 현황</h2></div>'
-   +'<div class="row half">'+panel('','var(--teal)','SNS 씨딩','실제 게시 기준','섭외부터 게시까지 진행 상황과 이 기간 올라온 게시물입니다.',seedHtml)
-   +panel('','var(--accent)','출고 · 배송 사고율 추이',mode==='week'?'최근 10주':mode==='month'?'최근 12개월':'월별','막대에 마우스를 올리면 출고 대비 사고율을 볼 수 있습니다.',chartSVG(bs))+'</div>';
-  bindChart(bs);
+   +'<div class="row">'+panel('','var(--teal)','SNS 씨딩','실제 게시 기준','섭외부터 게시까지 진행 상황과 게시 완료된 계정입니다. 계정을 누르면 게시물 이미지를 볼 수 있습니다.',seedHtml)+'</div>';
+  CTX={mode,p,cur,c,partial,unit,y:cur.end.slice(0,4),pl:mode==='month'?(+p.start.slice(5,7))+'월':mode==='week'?md(p.start)+'–'+md(p.end):p.start.slice(0,4)+'년',prod,tally,oo,og,names,posts};
+  if(M)drawM();
 }
 
 /* ---------- 불러오기 / 상태 ---------- */
@@ -438,10 +558,10 @@ async function load(){
   if(loading)return;loading=true;
   $('status').className='status';$('statusText').textContent='불러오는 중';
   let T={},failed=[];
-  if(window.CX_TEST_TABLES){for(const s of SOURCES){try{T[s.key]=toTable(window.CX_TEST_TABLES[s.key],s.need)}catch(e){failed.push(s.key)}}}
-  else{const res=await Promise.allSettled(SOURCES.map(fetchSource));res.forEach((r,i)=>{if(r.status==='fulfilled')T[SOURCES[i].key]=r.value;else failed.push(SOURCES[i].key)})}
+  if(window.CX_TEST_TABLES){for(const s of SOURCES){try{T[s.key]=toTable(window.CX_TEST_TABLES[s.key],s.need)}catch(e){if(!s.optional)failed.push(s.key)}}}
+  else{const res=await Promise.allSettled(SOURCES.map(fetchSource));res.forEach((r,i)=>{if(r.status==='fulfilled')T[SOURCES[i].key]=r.value;else if(!SOURCES[i].optional)failed.push(SOURCES[i].key)})}
   loading=false;
-  if(failed.length===SOURCES.length&&D){$('status').className='status err';$('statusText').textContent='연결 실패 · 이전 데이터 표시';return}
+  if(failed.length>=SOURCES.filter(s=>!s.optional).length&&D){$('status').className='status err';$('statusText').textContent='연결 실패 · 이전 데이터 표시';return}
   const firstLoad=!D;build(T);if(firstLoad||!state.anchor)state.anchor=defaultAnchor(state.mode);
   const now=new Date();
   $('status').className='status '+(failed.length?'err':'live');
@@ -454,6 +574,27 @@ document.querySelectorAll('#modeSeg button').forEach(b=>b.addEventListener('clic
 $('prevBtn').onclick=()=>{const p=shift(state.mode,periodOf(state.mode,state.anchor),-1);state.anchor=p.start;render()};
 $('nextBtn').onclick=()=>{const p=shift(state.mode,periodOf(state.mode,state.anchor),1);state.anchor=minS(p.start,LAST);render()};
 $('refreshBtn').onclick=load;
+
+/* ---------- 팝업 열고 닫기 ---------- */
+let lastFocus=null;
+function openM(type,arg,tab){if(!CTX||!MODALS[type])return;lastFocus=document.activeElement;M={type,arg,tab};drawM();$('mdl').hidden=false;document.body.style.overflow='hidden';$('mdlX').focus()}
+function closeM(){M=null;$('mdl').hidden=true;$('mdlB').innerHTML='';document.body.style.overflow='';if(lastFocus&&lastFocus.focus)try{lastFocus.focus()}catch(e){}}
+document.addEventListener('click',e=>{
+  if(e.target.closest('a'))return;
+  const mdl=$('mdl');
+  if(mdl.contains(e.target)){
+    if(e.target===mdl||e.target.closest('#mdlX')){closeM();return}
+    const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();return}
+    const pk=e.target.closest('[data-pick]');if(pk&&M){M.arg=pk.dataset.pick;drawM()}
+    return;
+  }
+  const t=e.target.closest('[data-open]');if(t)openM(t.dataset.open,t.dataset.arg,t.dataset.tab);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&M){closeM();return}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-open],[role="button"][data-pick]')){e.preventDefault();e.target.click()}
+});
+
 setInterval(()=>{if(!document.hidden)load()},10*60*1000);
 window.__fbCXSetTab=function(){window.scrollTo({top:0,behavior:'smooth'})};
 
