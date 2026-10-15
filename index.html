@@ -451,7 +451,7 @@ const mser=(k,extra)=>months().map(x=>Object.assign({lab:x.lab,sel:x.sel,v:x.m[k
 
 function trendControls(opts,tab){return '<div class="trend-controls">'+mtabs(opts,tab)+'<div class="seg"><button type="button" data-view="ratio" class="'+(M.view!=='count'?'active':'')+'">비율</button><button type="button" data-view="count" class="'+(M.view==='count'?'active':'')+'">수량</button></div></div>'}
 function trendChart(name,value,color){const count=M.view==='count',items=months().map(x=>({lab:x.lab,sel:x.sel,v:count?value(x):(x.m.out?value(x)/x.m.out:null)}));return sec('월별 '+name+(count?' 수량':' 비율'),count?'월 누적 건수':'월 총출고 대비 비율',count?bars(items,{color,zero:true,label:name+' 월별 수량'}):line(items,{color,label:name+' 월별 출고 대비 비율'}))}
-function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류'):x.cat||'미분류'));const entries=kind==='sentiment'?['긍정','부정','미분류'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:true,pa:kind==='sentiment'?'sentiment-open':'review-category-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','미분류':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 비중':'리뷰 카테고리 비중'})}
+function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류'):x.product||'제품 미기재'));const entries=kind==='sentiment'?['긍정','부정','미분류'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:true,pa:kind==='sentiment'?'sentiment-open':'review-product-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','미분류':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 비중':'제품별 리뷰 비중'})}
 function groupedReviews(rows){const by={};rows.forEach(x=>(by[x.product||'제품 미기재']=by[x.product||'제품 미기재']||[]).push(x));return Object.entries(by).sort((a,b)=>b[1].length-a[1].length).map(([name,list])=>sec(esc(name),'총 '+list.length+'건','<div class="rvlist" style="max-height:none">'+list.sort((a,b)=>b.d.localeCompare(a.d)).map(x=>rvCard(x,x.cat||'미분류','var(--accent)',true)).join('')+'</div>')).join('')||EMPTY('해당 리뷰가 없습니다.')}
 function inquiryModels(x){const tags=models(x).filter(t=>!isColor(t));const src=(x.opt||'')+' '+x.text;let m;const re=/(갤럭시\s*(?:탭\s*)?(?:S|Z|A)?\s*\d{1,2}(?:\s*(?:울트라|플러스|FE|폴드|플립))?|아이패드\s*(?:프로|에어|미니)?\s*(?:\d{1,2}(?:\.\d)?\s*(?:인치|세대))?)/gi;while((m=re.exec(src)))tags.push(norm(m[0]));return [...new Set(tags)].length?[...new Set(tags)]:['기종 미기재']}
 const ISSUE_DETAILS=[
@@ -484,9 +484,10 @@ const MODALS={
   issue(){const t=M.arg,ents=topN(CTX.prod[t]||{},999),product=CTX.prod[t]&&CTX.prod[t][M.product]?M.product:'',rows=product?CTX.c.asks.filter(x=>(x.cat||'미분류')===t&&(x.product||'제품 미기재')===product):[];
     return{t:'고객 이슈 · '+t,s:CTX.pl+' · '+fmt(CTX.tally[t]||0)+'건',h:sec('제품별 비중','제품을 누르면 기종·문의 내용 분석을 확인합니다.',pie(ents,{pick:true,pa:'issue-product',sel:product||null,label:t+' 제품별 비중'}))+(product?sec(esc(product),'해당 카테고리 접수 기준',issueAnalysis(rows,t)):'<p class="m-note">위 그래프 또는 제품명을 선택해 주세요.</p>')}},
   prod(){const k=M.arg,name=CTX.names[k]||k,o=Object.assign({},CTX.oo[k]||{}),tot=CTX.og[k]||0,known=Object.values(o).reduce((a,b)=>a+b,0);if(tot>known)o['옵션 미기재']=tot-known;return{t:name,s:CTX.pl,h:sec('옵션별 판매 비중','출고 수량 '+fmt(tot)+'개',pie(topN(o,999),{unit:'개',label:name+' 옵션별 판매 비중'}))}},
-  sentiment(){const name=M.arg,rows=CTX.c.rv.filter(x=>(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류')===name),by={};rows.forEach(x=>inc1(by,x.cat||'미분류'));const f=by[M.f]?M.f:'',list=f?rows.filter(x=>(x.cat||'미분류')===f):rows,entries=topN(by,999),button=(key,label,n)=>'<button type="button" class="pill click'+(key===f?' on':'')+'" data-f="'+esc(key)+'">'+esc(label)+' '+n+'건</button>';
-    return{t:name+' 리뷰',s:CTX.pl+' · 총 '+rows.length+'건',h:sec('카테고리별 비중','원형 그래프와 아래 버튼으로 필터링할 수 있습니다.',pie(entries,{pick:true,pa:'f',sel:f||null,label:name+' 리뷰 카테고리 비중'}))+sec('전체 리뷰'+(f?' · '+esc(f):''),list.length+'건','<div class="chips">'+button('','전체',rows.length)+entries.map(([k,n])=>button(k,k,n)).join('')+'</div>'+groupedReviews(list))}},
-  reviewCategory(){const name=M.arg,rows=CTX.c.rv.filter(x=>(x.cat||'미분류')===name);return{t:'리뷰 카테고리 · '+name,s:CTX.pl+' · 총 '+rows.length+'건',h:sec('제품별 비중','시트 K열 카테고리 기준',productPie(rows,name+' 리뷰 제품별 비중'))}},
+  sentiment(){const name=M.arg,rows=CTX.c.rv.filter(x=>(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류')===name),by={};rows.forEach(x=>inc1(by,x.cat||'미분류'));const entries=topN(by,999),f=by[M.f]?M.f:(entries[0]?entries[0][0]:''),list=rows.filter(x=>(x.cat||'미분류')===f),button=(key,n)=>'<button type="button" class="pill click'+(key===f?' on':'')+'" data-f="'+esc(key)+'">'+esc(key)+' '+n+'건</button>';
+    return{t:name+' 리뷰',s:CTX.pl+' · 총 '+rows.length+'건',h:sec('카테고리별 비중','리뷰가 가장 많은 카테고리를 기본으로 표시합니다.',pie(entries,{pick:true,pa:'f',sel:f||null,label:name+' 리뷰 카테고리 비중'}))+sec(f?esc(f)+' 리뷰':'리뷰',list.length+'건','<div class="chips">'+entries.map(([k,n])=>button(k,n)).join('')+'</div>'+groupedReviews(list))}},
+  reviewProduct(){const name=M.arg,rows=CTX.c.rv.filter(x=>(x.product||'제품 미기재')===name),by={};rows.forEach(x=>inc1(by,x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류'));const entries=['긍정','부정','미분류'].filter(k=>by[k]).map(k=>[k,by[k]]),sel=by[M.f]?M.f:(entries[0]?entries[0][0]:''),list=rows.filter(x=>(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류')===sel);
+    return{t:'제품별 리뷰 · '+name,s:CTX.pl+' · 총 '+rows.length+'건',h:sec('긍정 · 부정 비중','원형 그래프 또는 버튼을 누르면 해당 리뷰를 확인합니다.',pie(entries,{pick:true,pa:'f',sel:sel||null,colors:{'긍정':'#4c8dff','부정':'#ff5c6c','미분류':'#89919e'},label:name+' 리뷰 긍정 부정 비중'}))+sec(esc(sel||'리뷰'),list.length+'건','<div class="chips">'+entries.map(([k,n])=>'<button type="button" class="pill click'+(k===sel?' on':'')+'" data-f="'+esc(k)+'">'+esc(k)+' '+n+'건</button>').join('')+'</div>'+groupedReviews(list))}},
   praise(){const o=CTX.highs.find(q=>q.n===M.arg);if(!o)return{t:'높은 별점 리뷰',s:CTX.pl,h:EMPTY('해당 리뷰가 없습니다.')};
     return{t:'높은 별점 리뷰 · '+o.n,s:CTX.pl+' · '+o.list.length+'건',h:'<div class="rvlist" style="max-height:none">'+o.list.map(x=>rvCard(x,o.n,o.c,true)).join('')+'</div>'}},
   post(){const x=CTX.posts[+M.arg];if(!x)return{t:'게시물',s:'',h:EMPTY('게시물을 찾을 수 없습니다.')};
@@ -591,7 +592,7 @@ function render(){
    +'</div>'
    +'<div class="sec"><h2>고객의 목소리</h2><span>선택 기간 리뷰 · 시트 J열 긍정/부정 · K열 카테고리</span></div>'
    +'<div class="row two">'+panel('','var(--accent)','리뷰 긍정 · 부정','총 '+c.rv.length+'건','시트 J열 기준입니다. 긍정·부정을 누르면 카테고리별 비중과 리뷰를 확인합니다. 미기재 항목은 미분류로 표시합니다.',reviewBreakdown(c.rv,'sentiment'))
-   +panel('','var(--teal)','리뷰 카테고리','총 '+c.rv.length+'건','시트 K열 기준입니다. 카테고리를 누르면 제품별 비중을 확인합니다.',reviewBreakdown(c.rv,'category'))+'</div>'
+   +panel('','var(--teal)','제품별 리뷰','총 '+c.rv.length+'건','제품을 누르면 해당 제품의 긍정·부정 비율과 리뷰를 확인합니다.',reviewBreakdown(c.rv,'product'))+'</div>'
    +'<div class="sec"><h2>운영 · 마케팅 현황</h2></div>'
    +'<div class="row">'+panel('','var(--teal)','SNS 씨딩','시트 기록 기준','섭외부터 게시까지 진행 상황입니다. 좋아요·댓글은 시트 입력값이며, 계정을 누르면 실제 게시물을 확인합니다.',seedHtml)+'</div>'+socialSection();
   CTX={mode,p,cur,c,partial,unit,y:cur.end.slice(0,4),pl:mode==='month'?(+p.start.slice(5,7))+'월':mode==='week'?md(p.start)+'–'+md(p.end):p.start.slice(0,4)+'년',prod,tally,oo,og,names,posts,rs,rtags,rcol,highs};
@@ -636,12 +637,12 @@ document.addEventListener('click',e=>{
     const analysis=e.target.closest('[data-analysis]');if(analysis&&M){M.analysis=M.analysis===analysis.dataset.analysis?'':analysis.dataset.analysis;drawM();return}
     const view=e.target.closest('[data-view]');if(view&&M){M.view=view.dataset.view;drawM();return}
     const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();return}
-    const fl=e.target.closest('[data-f]');if(fl&&M){M.f=M.f===fl.dataset.f?'':fl.dataset.f;drawM();return}
+    const fl=e.target.closest('[data-f]');if(fl&&M){M.f=(M.type==='sentiment'||M.type==='reviewProduct')?fl.dataset.f:(M.f===fl.dataset.f?'':fl.dataset.f);drawM();return}
     const pk=e.target.closest('[data-pick]');if(pk&&M){M.arg=pk.dataset.pick;drawM()}
     return;
   }
   const sentimentOpen=e.target.closest('[data-sentiment-open]');if(sentimentOpen){openM('sentiment',sentimentOpen.dataset.sentimentOpen);return}
-  const categoryOpen=e.target.closest('[data-review-category-open]');if(categoryOpen){openM('reviewCategory',categoryOpen.dataset.reviewCategoryOpen);return}
+  const productOpen=e.target.closest('[data-review-product-open]');if(productOpen){openM('reviewProduct',productOpen.dataset.reviewProductOpen);return}
   const campaign=e.target.closest('[data-campaign]');if(campaign){selectedCamp=campaign.dataset.campaign;render();return}
   const sm=e.target.closest('[data-social-mode]');if(sm){socialMode=sm.dataset.socialMode;render();return}
   const st=e.target.closest('[data-social-step]');if(st){const r=socialRange(),n=+st.dataset.socialStep;socialAnchor=socialMode==='week'?addDays(r.start,7*n):shift('month',r,n).start;render();return}
@@ -651,7 +652,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&M){closeM();return}
-  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-open],[role="button"][data-pick],[role="button"][data-f],[role="button"][data-sentiment-open],[role="button"][data-review-category-open],[role="button"][data-issue-product]')){e.preventDefault();e.target.click()}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-open],[role="button"][data-pick],[role="button"][data-f],[role="button"][data-sentiment-open],[role="button"][data-review-product-open],[role="button"][data-issue-product]')){e.preventDefault();e.target.click()}
 });
 
 setInterval(()=>{if(!document.hidden)load()},10*60*1000);
