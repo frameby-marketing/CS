@@ -254,12 +254,13 @@ function pdate(v){const m=String(v||'').match(/(\d{2,4})\s*[.\-\/년]\s*(\d{1,2}
 
 /* ---------- 데이터 정리 ---------- */
 let D=null,LAST=null,TODAY=null,FIRST={},state={mode:'week',anchor:null};
+const inquiryCategory=value=>/^a\s*\/?\s*s(?:\s*문의)?$/i.test(norm(value))?'A/S':norm(value)||'미분류';
 function build(T){
   const daily=mapRows(T.daily,g=>{const d=pdate(g('날짜'));if(!d)return null;const own=num(g('자사몰 출고')),cp=num(g('쿠팡 출고')),out=num(g('출고 합계'))||own+cp,miss=num(g('누락')),wrong=num(g('오배송')),dmg=num(g('분실/파손')||g('파손'));return{d,out,own,cp,miss,wrong,dmg,inc:Math.max(miss+wrong+dmg,num(g('사고 합계'))),ret:num(g('반품')),exch:num(g('교환'))}});
   const incidents=mapRows(T.incidents,g=>{const d=pdate(g('접수일'));if(!d)return null;return{d,type:g('구분'),done:!!pdate(g('처리 완료일'))}});
   const orders=mapRows(T.orders,g=>{const d=pdate(g('출고일자'));const code=g('상품코드');if(!d||!code)return null;return{d,code,name:g('주문 내역'),qty:num(g('수량'))||1}});
-  const inquiry=mapRows(T.inquiry,g=>{const d=pdate(g('문의일'));const text=g('문의 내용');if(!d||!text)return null;return{d,src:'문의',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:g('Category')||g('카테고리')||'미분류',text}});
-  const chat=mapRows(T.chat,g=>{const d=pdate(g('인입일'));const text=g('상담 내용 요약');if(!d||!text)return null;return{d,src:'채팅',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:g('Category')||g('카테고리')||'미분류',text}});
+  const inquiry=mapRows(T.inquiry,g=>{const d=pdate(g('문의일'));const text=g('문의 내용');if(!d||!text)return null;return{d,src:'문의',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:inquiryCategory(g('Category')||g('카테고리')),text}});
+  const chat=mapRows(T.chat,g=>{const d=pdate(g('인입일'));const text=g('상담 내용 요약');if(!d||!text)return null;return{d,src:'채팅',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:inquiryCategory(g('Category')||g('카테고리')),text}});
   const review=mapRows(T.review,g=>{const d=pdate(g('리뷰 작성일'));const star=num(g('별점'));if(!d||!star)return null;return{d,src:'리뷰',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),star,sentiment:g('긍정/부정'),cat:g('Category')||'미분류',text:g('리뷰 내용'),memo:g('처리 메모'),imp:!!g('중요')}});
   const seeding=mapRows(T.seeding,g=>{const id=g('씨딩ID'),acc=g('계정');if(!/^S-/i.test(id)&&!/^@/.test(acc))return null;const st=g('상태');const posted=pdate(g('실제 게시일'));const ship=g('제품 발송 상태');return{id,camp:g('캠페인')||'캠페인 미기재',acc,fol:num(g('팔로워')),cat:g('카테고리'),recruit:g('섭외 상태'),confirmed:/완료/.test(g('섭외 상태')),cd:pdate(g('섭외 확정일')),sent:/발송/.test(ship)&&/완료/.test(ship)||!!pdate(g('발송일')),sd:pdate(g('발송일')),due:pdate(g('게시 약속일')),posted:posted||(/게시\s*완료/.test(st)?(pdate(g('발송일'))||''):null),pd:posted,url:g('게시 URL'),likes:num(g('좋아요')),cmts:num(g('댓글')),cost:num(g('원가'))*(num(g('수량'))||1)}});
   const social=T.social?T.social.rows.map((r,i)=>{const d=pdate(r[0]);if(!d)return null;const media=r.slice(4,14).map(safeMedia).filter(Boolean);return{id:i,d,cat:norm(r[1]),sub:norm(r[2]),text:String(r[3]||'').trim(),media}}).filter(Boolean):[];
@@ -456,7 +457,7 @@ const mser=(k,extra)=>months().map(x=>Object.assign({lab:x.lab,sel:x.sel,v:x.m[k
 
 function trendControls(opts,tab){return '<div class="trend-controls">'+mtabs(opts,tab)+'<div class="seg"><button type="button" data-view="ratio" class="'+(M.view!=='count'?'active':'')+'">비율</button><button type="button" data-view="count" class="'+(M.view==='count'?'active':'')+'">수량</button></div></div>'}
 function trendChart(name,value,color){const count=M.view==='count',items=months().map(x=>({lab:x.lab,sel:x.sel,v:count?value(x):(x.m.out?value(x)/x.m.out:null)}));return sec('월별 '+name+(count?' 수량':' 비율'),count?'월 누적 건수':'월 총출고 대비 비율',count?bars(items,{color,zero:true,label:name+' 월별 수량'}):line(items,{color,label:name+' 월별 출고 대비 비율'}))}
-function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류'):x.product||'제품 미기재'));const entries=kind==='sentiment'?['긍정','부정','미분류'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:true,pa:kind==='sentiment'?'sentiment-open':'review-product-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','미분류':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 비중':'제품별 리뷰 비중'})}
+function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류'):x.product||'제품 미기재'));const entries=kind==='sentiment'?['긍정','부정','미분류'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:kind!=='sentiment',pa:kind==='sentiment'?'sentiment-open':'review-product-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','미분류':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 비중':'제품별 리뷰 비중'})}
 function groupedReviews(rows){const by={};rows.forEach(x=>(by[x.product||'제품 미기재']=by[x.product||'제품 미기재']||[]).push(x));return Object.entries(by).sort((a,b)=>b[1].length-a[1].length).map(([name,list])=>sec(esc(name),'총 '+list.length+'건','<div class="rvlist" style="max-height:none">'+list.sort((a,b)=>b.d.localeCompare(a.d)).map(x=>rvCard(x,x.cat||'미분류','var(--accent)',true)).join('')+'</div>')).join('')||EMPTY('해당 리뷰가 없습니다.')}
 const REVIEW_KEYWORDS=[
  ['업무 효율',/업무.{0,15}(효율|편|생산)|효율|생산성/],['휴대용',/휴대|가지고 다니|들고 다니|갖고 다니/],['착붙는 자력',/착붙|착 붙|자력.{0,10}(강|좋|쎄)|자석.{0,10}(강|좋|쎄)/],['노트북·아이패드 동시 거치',/(노트북|맥북)[\s\S]*(아이패드|태블릿|테블릿)[\s\S]*(동시|함께|같이)|동시.{0,15}(거치|사용)|듀얼/],
@@ -602,12 +603,12 @@ function render(){
    +'<div class="kpis">'+tiles+'</div>'
    +'<div class="sec"><h2>이번 '+unit+' 꼭 볼 3가지</h2><span>'+(cmpVoice||cmpOrders?'오른쪽 작은 숫자는 '+prevName+' 대비 증감':'')+'</span></div>'
    +'<div class="row three">'
-   +panel('hero','var(--bad)','고객이 가장 많이 말한 이슈','총 '+tot+'건','게시판 문의 I열과 채팅상담 G열의 카테고리를 통합했습니다. 카테고리를 누르면 제품별 비중이 나옵니다.',issues)
-   +panel('hero','var(--warn)','재입고 요청 TOP','총 '+rtot+'건','재고가 없어 놓치고 있는 수요입니다.',restock)
+   +panel('hero','var(--bad)','고객이 가장 많이 말한 문의','총 '+tot+'건','게시판 문의 I열과 채팅상담 G열의 카테고리를 통합했습니다. 카테고리를 누르면 제품별 비중이 나옵니다.',issues)
+   +panel('hero','var(--warn)','재입고 요청 TOP 5','총 '+rtot+'건','재고가 없어 놓치고 있는 수요입니다.',restock)
    +panel('hero','var(--accent)','많이 나간 제품 TOP 5',fmt(otot)+'개','주문 원장 출고 수량 · 옵션 합산',sales)
    +'</div>'
    +'<div class="sec"><h2>고객의 목소리</h2><span>선택 기간 리뷰 · 시트 J열 긍정/부정 · K열 카테고리</span></div>'
-   +'<div class="row two">'+panel('','var(--accent)','리뷰 긍정 · 부정','총 '+c.rv.length+'건','시트 J열 기준입니다. 긍정·부정을 누르면 카테고리별 비중과 리뷰를 확인합니다. 미기재 항목은 미분류로 표시합니다.',reviewBreakdown(c.rv,'sentiment'))
+   +'<div class="row two">'+panel('','var(--accent)','리뷰 긍정 · 부정','총 '+c.rv.length+'건','전체 리뷰 중 긍정·부정·미분류 비중입니다. 시트 J열 기준이며, 미기재 항목은 미분류로 표시합니다.',reviewBreakdown(c.rv,'sentiment'))
    +panel('','var(--teal)','제품별 리뷰','총 '+c.rv.length+'건','제품을 누르면 해당 제품의 긍정·부정 비율과 리뷰를 확인합니다.',reviewBreakdown(c.rv,'product'))+'</div>'
    +'<div class="sec"><h2>운영 · 마케팅 현황</h2></div>'
    +'<div class="row">'+panel('','var(--teal)','SNS 씨딩','시트 기록 기준','섭외부터 게시까지 진행 상황입니다. 좋아요·댓글은 시트 입력값이며, 계정을 누르면 실제 게시물을 확인합니다.',seedHtml)+'</div>'+socialSection();
