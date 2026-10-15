@@ -199,6 +199,8 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .review-summary{padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--bg);margin-top:16px}.summary-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.review-summary p,.review-summary li{font-size:13px;line-height:1.7}.review-summary small{color:var(--sub);font-size:11px}.review-summary ul{padding-left:20px}
 .review-summary{padding:20px}.review-summary .summary-lead{font-size:21px;font-weight:750;line-height:1.5;margin:16px 0 12px;letter-spacing:-.4px}.review-summary .summary-phrases p{font-size:17px;line-height:1.6;margin:8px 0;color:var(--sub)}.summary-head small{font-size:11px;font-weight:400;margin-left:6px}@media(max-width:580px){.review-summary .summary-lead{font-size:19px}.review-summary .summary-phrases p{font-size:16px}}
 .summary-product-lines{margin-top:14px}.summary-product-line{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line);font-size:18px;line-height:1.55;overflow-wrap:anywhere}.summary-product-line:last-child{border-bottom:0}.summary-product-line b{font-size:16px;font-weight:750}.summary-product-line span{color:var(--text)}@media(max-width:580px){.summary-product-line{font-size:16px}.summary-product-line b{font-size:15px}}
+.review-keywords{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px 20px;padding:22px 0}.review-keyword{font-size:23px;font-weight:750;line-height:1.4;color:var(--text);letter-spacing:-.6px}.review-keyword.major{font-size:30px;color:var(--accent)}.review-keyword small{font-size:11px;vertical-align:super;margin-left:5px;color:var(--sub);font-weight:500}.keyword-empty{font-size:17px;color:var(--sub)}@media(max-width:580px){.review-keyword{font-size:20px}.review-keyword.major{font-size:25px}.review-keywords{gap:12px 16px}}
+.review-summary{background:transparent;border:0;padding:12px 0}.review-keywords{gap:10px;padding:18px 0 8px}.review-keyword,.review-keyword.major{display:inline-flex;align-items:center;padding:11px 17px;border-radius:999px;background:var(--grid);color:var(--text);font-size:17px;font-weight:650;line-height:1.4;letter-spacing:-.4px;border:0}.keyword-more{cursor:pointer;font-size:20px;font-weight:750}.keyword-more:hover{filter:brightness(.94)}[data-theme="light"] .review-keyword{background:#f3f5f7;color:#17191c}@media(max-width:580px){.review-keywords{gap:8px}.review-keyword,.review-keyword.major{font-size:15px;padding:10px 14px}}
 </style></head><body><div class="wrap">
 <header class="top"><div><h1>CX 통합</h1><div class="sub">고객 반응 · 배송 품질 · SNS 씨딩을 한 장으로 · 매주 금요일 공유</div></div>
 <div class="actions"><span class="status" id="status"><i></i><span id="statusText">불러오는 중</span></span><button type="button" class="btn" id="refreshBtn">↻ 새로고침</button><div class="seg theme"><button type="button" id="themeLightBtn" title="라이트 모드">☀️</button><button type="button" id="themeDarkBtn" title="다크 모드">🌙</button></div></div></header>
@@ -456,17 +458,15 @@ function trendControls(opts,tab){return '<div class="trend-controls">'+mtabs(opt
 function trendChart(name,value,color){const count=M.view==='count',items=months().map(x=>({lab:x.lab,sel:x.sel,v:count?value(x):(x.m.out?value(x)/x.m.out:null)}));return sec('월별 '+name+(count?' 수량':' 비율'),count?'월 누적 건수':'월 총출고 대비 비율',count?bars(items,{color,zero:true,label:name+' 월별 수량'}):line(items,{color,label:name+' 월별 출고 대비 비율'}))}
 function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(x.sentiment==='긍정'||x.sentiment==='부정'?x.sentiment:'미분류'):x.product||'제품 미기재'));const entries=kind==='sentiment'?['긍정','부정','미분류'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:true,pa:kind==='sentiment'?'sentiment-open':'review-product-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','미분류':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 비중':'제품별 리뷰 비중'})}
 function groupedReviews(rows){const by={};rows.forEach(x=>(by[x.product||'제품 미기재']=by[x.product||'제품 미기재']||[]).push(x));return Object.entries(by).sort((a,b)=>b[1].length-a[1].length).map(([name,list])=>sec(esc(name),'총 '+list.length+'건','<div class="rvlist" style="max-height:none">'+list.sort((a,b)=>b.d.localeCompare(a.d)).map(x=>rvCard(x,x.cat||'미분류','var(--accent)',true)).join('')+'</div>')).join('')||EMPTY('해당 리뷰가 없습니다.')}
+const REVIEW_KEYWORDS=[
+ ['업무 효율',/업무.{0,15}(효율|편|생산)|효율|생산성/],['휴대용',/휴대|가지고 다니|들고 다니|갖고 다니/],['착붙는 자력',/착붙|착 붙|자력.{0,10}(강|좋|쎄)|자석.{0,10}(강|좋|쎄)/],['노트북·아이패드 동시 거치',/(노트북|맥북)[\s\S]*(아이패드|태블릿|테블릿)[\s\S]*(동시|함께|같이)|동시.{0,15}(거치|사용)|듀얼/],
+ ['가벼운 무게',/가볍|가벼|경량/],['거치 안정성',/안정|튼튼|흔들림.{0,8}(없|적)|단단/],['자세·목·허리',/자세|거북목|목.{0,8}(편|덜|좋)|허리/],['공간 활용',/공간|책상.{0,10}(넓|정리)|깔끔/],['사용 편의성',/편리|편하|편해|편하고|쓰기 편|사용.{0,8}편/],['디자인',/디자인|예쁘|예뻐|이쁘|이뻐|고급|색감/],['필기감',/필기|필압|글씨|종이|펜촉/],['각도 조절',/각도|높이.{0,8}조절/],['카드 수납',/카드|수납/],['자석·맥세이프',/자석|자력|맥세이프/],['힌지·크랙',/힌지|크랙|금이|금가/],['파손·내구성',/파손|깨[지졌짐]|부러|내구성/],['헐거움·흔들림',/헐거|흔들|불안정/],['무게 부담',/무겁|무거/],['가격 부담',/비싸|비쌈|가격.{0,8}(부담|높)/],['배송',/배송|택배|출고/],['호환성',/호환|기종/],['재구매',/재구매|또 샀|두.?번째|세.?번째/],['선물',/선물/]
+];
+function reviewKeywords(rows){const counts={};rows.forEach(x=>{const text=String(x.text||'');REVIEW_KEYWORDS.forEach(([label,re])=>{if(re.test(text))inc1(counts,label)})});return topN(counts,10)}
 function reviewSummary(rows){
  if(!rows.length)return EMPTY('요약할 리뷰가 없습니다.');
- const products={};rows.forEach(x=>(products[x.product||'제품 미기재']=products[x.product||'제품 미기재']||[]).push(x));
- const shortName=name=>name.replace(/^맥세이프\s*킥프레임$/,'킥프레임');
- const lines=Object.entries(products).sort((a,b)=>b[1].length-a[1].length).map(([name,list])=>{
-   const parts=list.flatMap(x=>String(x.text||'').split(/\n+|(?<=[.!?。！？])\s+/).map(t=>t.trim()).filter(t=>t.length>=4&&!/^#/.test(t)));
-   const useful=parts.filter(t=>!/^(안녕하세요|감사합니다|배송완료|사진|동영상)/.test(t));const pool=useful.length?useful:parts;
-   const phrase=pool.find(t=>t.length<=40)||pool[0]||'리뷰 내용 없음';const compact=phrase.length>40?phrase.slice(0,37)+'…':phrase;
-   return '<div class="summary-product-line"><b>'+esc(shortName(name))+'</b><span>“'+esc(compact)+'”</span></div>';
- }).join('');
- return '<div class="review-summary"><div class="summary-head"><b>리뷰 요약 <small>'+rows.length+'건 기준</small></b><button type="button" class="pill click" data-review-toggle aria-expanded="'+(M.showReviews?'true':'false')+'">'+(M.showReviews?'리뷰 접기':'리뷰 보기')+'</button></div><div class="summary-product-lines">'+lines+'</div></div>'+(M.showReviews?groupedReviews(rows):'');
+ const words=reviewKeywords(rows),visible=M.moreWords?words:words.slice(0,8),remaining=words.length-visible.length;
+ return '<div class="review-summary"><div class="summary-head"><b>리뷰 키워드 <small>'+rows.length+'건 기준</small></b><button type="button" class="pill click" data-review-toggle aria-expanded="'+(M.showReviews?'true':'false')+'">'+(M.showReviews?'리뷰 접기':'리뷰 보기')+'</button></div><div class="review-keywords">'+(words.length?visible.map(([label,n])=>'<span class="review-keyword" title="'+esc(label)+' · '+n+'건 언급">'+esc(label)+'</span>').join('')+(remaining?'<button type="button" class="review-keyword keyword-more" data-keyword-more aria-label="키워드 '+remaining+'개 더 보기">+'+remaining+'</button>':''):'<span class="keyword-empty">추출된 키워드 없음</span>')+'</div></div>'+(M.showReviews?groupedReviews(rows):'');
 }
 
 function inquiryModels(x){const tags=models(x).filter(t=>!isColor(t));const src=(x.opt||'')+' '+x.text;let m;const re=/(갤럭시\s*(?:탭\s*)?(?:S|Z|A)?\s*\d{1,2}(?:\s*(?:울트라|플러스|FE|폴드|플립))?|아이패드\s*(?:프로|에어|미니)?\s*(?:\d{1,2}(?:\.\d)?\s*(?:인치|세대))?)/gi;while((m=re.exec(src)))tags.push(norm(m[0]));return [...new Set(tags)].length?[...new Set(tags)]:['기종 미기재']}
@@ -653,8 +653,9 @@ document.addEventListener('click',e=>{
     const analysis=e.target.closest('[data-analysis]');if(analysis&&M){M.analysis=M.analysis===analysis.dataset.analysis?'':analysis.dataset.analysis;drawM();return}
     const view=e.target.closest('[data-view]');if(view&&M){M.view=view.dataset.view;drawM();return}
     const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();return}
+    if(e.target.closest('[data-keyword-more]')&&M){M.moreWords=true;drawM();return}
     if(e.target.closest('[data-review-toggle]')&&M){M.showReviews=!M.showReviews;drawM();return}
-    const fl=e.target.closest('[data-f]');if(fl&&M){M.f=(M.type==='sentiment'||M.type==='reviewProduct')?fl.dataset.f:(M.f===fl.dataset.f?'':fl.dataset.f);M.showReviews=false;drawM();return}
+    const fl=e.target.closest('[data-f]');if(fl&&M){M.f=(M.type==='sentiment'||M.type==='reviewProduct')?fl.dataset.f:(M.f===fl.dataset.f?'':fl.dataset.f);M.showReviews=false;M.moreWords=false;drawM();return}
     const pk=e.target.closest('[data-pick]');if(pk&&M){M.arg=pk.dataset.pick;drawM()}
     return;
   }
