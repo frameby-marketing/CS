@@ -408,6 +408,18 @@ function pie(entries,o){
 }
 
 
+const SOCIAL_APP_URL='https://script.google.com/macros/s/AKfycbyB0SSM_QfAEnclVEzqGE0D1dDLQz1a2b4rOfaamLDTpStTYU3cP_S-HPQD6I6zHNiX/exec';
+function fetchSocialApp(){return new Promise((resolve,reject)=>{
+ const callback='cxSocial_'+Date.now()+'_'+Math.random().toString(36).slice(2),script=document.createElement('script');
+ let finished=false;const finish=(error,data)=>{if(finished)return;finished=true;clearTimeout(timer);script.remove();delete window[callback];error?reject(error):resolve(data)};
+ const timer=setTimeout(()=>finish(new Error('SNS 이미지 연결 시간 초과')),20000);
+ window[callback]=data=>{if(!data||data.ok!==true||!Array.isArray(data.posts)){finish(new Error('SNS 이미지 응답 오류'));return}finish(null,data)};
+ script.onerror=()=>finish(new Error('SNS 이미지 연결 실패'));script.src=SOCIAL_APP_URL+'?callback='+callback+'&_='+Date.now();document.head.appendChild(script);
+})}
+function applySocialApp(data){
+ D.social=data.posts.map((x,i)=>({id:i,d:pdate(x.date),cat:norm(x.category),sub:norm(x.subcategory),text:String(x.text||''),media:(Array.isArray(x.images)?x.images:[]).slice(0,10).map(safeMedia).filter(Boolean),imageErrors:Number(x.imageErrors)||0})).filter(x=>x.d);
+ D.socialAvailable=true;D.socialImageError='';D.socialUpdatedAt=String(data.updatedAt||'');
+}
 function safeMedia(value){
   let v=String(value||'').trim(),m=v.match(/^=IMAGE\(\s*"([^"]+)"/i);if(m)v=m[1];
   try{const u=new URL(v);return u.protocol==='https:'||u.protocol==='http:'?u.href:''}catch(e){return ''}
@@ -415,10 +427,10 @@ function safeMedia(value){
 function socialRange(){const anchor=socialAnchor||TODAY;if(socialMode==='month')return periodOf('month',anchor);const dt=toD(anchor),start=addDays(anchor,-((dt.getDay()+6)%7));return{start,end:addDays(start,6)}}
 function socialSlots(range){const by={};(D.social||[]).filter(x=>inR(x.d,range)).forEach(x=>(by[x.d]=by[x.d]||[]).push(x));for(let d=range.start;d<=range.end;d=addDays(d,1))if([2,4,6].includes(toD(d).getDay())&&!by[d])by[d]=[{id:'empty-'+d,d,cat:'',sub:'',text:'',media:[]}];return Object.keys(by).sort().flatMap(d=>by[d])}
 function socialCard(x){const has=!!(x.cat||x.sub||x.text||x.media.length),status=!has?'미정':x.d>TODAY?'게시 예정':x.d===TODAY?'오늘 일정 · 게시 확인 필요':'지난 일정 · 게시 확인 필요';
-const media=x.media.length?'<img loading="lazy" src="'+esc(x.media[0])+'" alt="'+esc(x.sub||'콘텐츠 미리보기')+'" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="social-placeholder" hidden>이미지를 불러올 수 없습니다.<br>원본 주소와 공유 설정을 확인해 주세요.</div>':'<div class="social-placeholder"><strong>'+esc(x.sub||(has?'콘텐츠 준비 중':'아직 미정'))+'</strong>'+(has?'이미지 주소가 있으면 미리보기가 표시됩니다.':'화 · 목 · 토 정기 게시 일정')+'</div>';
+const media=x.media.length?'<img loading="lazy" src="'+esc(x.media[0])+'" alt="'+esc(x.sub||'콘텐츠 미리보기')+'" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="social-placeholder" hidden>이미지를 불러올 수 없습니다.<br>원본 주소와 공유 설정을 확인해 주세요.</div>':'<div class="social-placeholder"><strong>'+esc(x.sub||(has?'콘텐츠 준비 중':'아직 미정'))+'</strong>'+(x.imageErrors?'시트 이미지 일부를 읽지 못했습니다.':has?'등록된 이미지가 없습니다.':'화 · 목 · 토 정기 게시 일정')+'</div>';
 return '<article class="social-card"><div class="social-user"><span class="social-avatar">FB</span><b>FRAMEBY</b><span style="margin-left:auto">'+mdw(x.d)+'</span></div><div class="social-cover" data-social-cover="'+esc(x.id)+'">'+media+'</div>'+(x.media.length>1?'<div class="social-media-nav"><button type="button" data-slide="-1" data-social-id="'+x.id+'" aria-label="이전 이미지">‹</button><span id="social-count-'+x.id+'">1 / '+x.media.length+'</span><button type="button" data-slide="1" data-social-id="'+x.id+'" aria-label="다음 이미지">›</button></div>':'')+'<div class="social-body"><span class="social-status '+(x.d>TODAY?'future':'')+'">'+status+'</span><h3>'+esc(x.sub||x.cat||'게시 내용 미정')+'</h3>'+(x.cat?'<small>'+esc(x.cat)+'</small>':'')+(x.text?'<details><summary>게시글 내용 보기</summary><p>'+esc(x.text)+'</p></details>':'<p class="social-note">내용이 아직 등록되지 않았습니다.</p>')+'</div></article>'}
 function socialSection(){if(D.socialAvailable===false)return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2></div><div class="panel"><p class="social-note">SNS 관리 시트를 불러오지 못했습니다. 게시 일정 미정 여부를 확인할 수 없습니다. 시트 연결과 공유 설정을 확인해 주세요.</p></div>';const r=socialRange(),rows=socialSlots(r),next=socialSlots({start:addDays(TODAY,1),end:addDays(TODAY,14)}).slice(0,3),recorded=rows.filter(x=>x.cat||x.sub||x.text||x.media.length).length;
-return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2><span>화 · 목 · 토 정기 게시</span></div><div class="panel"><div class="social-head"><div class="seg"><button type="button" data-social-mode="week" class="'+(socialMode==='week'?'active':'')+'">주간</button><button type="button" data-social-mode="month" class="'+(socialMode==='month'?'active':'')+'">월간</button></div><div class="social-period">'+md(r.start)+' – '+md(r.end)+' · '+r.start.slice(0,4)+'</div><div class="seg"><button type="button" data-social-step="-1">‹ 이전</button><button type="button" data-social-today>이번 '+(socialMode==='week'?'주':'달')+'</button><button type="button" data-social-step="1">다음 ›</button></div></div><p class="social-note">등록 '+recorded+'건 · 미정 '+(rows.length-recorded)+'건 · SNS 관리 시트 기준</p><div class="social-grid">'+rows.map(socialCard).join('')+'</div><h3 style="margin-top:24px">다가오는 게시 일정</h3><div class="social-next">'+next.map(x=>'<span><b>'+mdw(x.d)+'</b> · '+esc(x.sub||x.cat||'미정')+'</span>').join('')+'</div><p class="social-note">지난 일정도 게시 완료 여부는 별도 확인이 필요합니다. E~N열의 이미지 주소는 최대 10장까지 미리보기로 표시합니다.</p></div>';
+return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2><span>화 · 목 · 토 정기 게시</span></div><div class="panel"><div class="social-head"><div class="seg"><button type="button" data-social-mode="week" class="'+(socialMode==='week'?'active':'')+'">주간</button><button type="button" data-social-mode="month" class="'+(socialMode==='month'?'active':'')+'">월간</button></div><div class="social-period">'+md(r.start)+' – '+md(r.end)+' · '+r.start.slice(0,4)+'</div><div class="seg"><button type="button" data-social-step="-1">‹ 이전</button><button type="button" data-social-today>이번 '+(socialMode==='week'?'주':'달')+'</button><button type="button" data-social-step="1">다음 ›</button></div></div><p class="social-note">등록 '+recorded+'건 · 미정 '+(rows.length-recorded)+'건 · SNS 관리 시트 기준</p>'+(D.socialImageError?'<p class="social-note" role="status">'+esc(D.socialImageError)+'</p>':'')+'<div class="social-grid">'+rows.map(socialCard).join('')+'</div><h3 style="margin-top:24px">다가오는 게시 일정</h3><div class="social-next">'+next.map(x=>'<span><b>'+mdw(x.d)+'</b> · '+esc(x.sub||x.cat||'미정')+'</span>').join('')+'</div><p class="social-note">지난 일정도 게시 완료 여부는 별도 확인이 필요합니다. E~N열의 셀 안 이미지를 최대 10장까지 자동으로 불러옵니다. 이미지와 일정은 10분마다 갱신합니다.</p></div>';
 }
 
 /* ---------- 팝업 내용 ---------- */
@@ -599,9 +611,11 @@ async function load(){
   let T={},failed=[];
   if(window.CX_TEST_TABLES){for(const s of SOURCES){try{T[s.key]=toTable(window.CX_TEST_TABLES[s.key],s.need)}catch(e){if(!s.optional)failed.push(s.key)}}}
   else{const res=await Promise.allSettled(SOURCES.map(fetchSource));res.forEach((r,i)=>{if(r.status==='fulfilled')T[SOURCES[i].key]=r.value;else if(!SOURCES[i].optional)failed.push(SOURCES[i].key)})}
+  if(failed.length>=SOURCES.filter(s=>!s.optional).length&&D){$('status').className='status err';$('statusText').textContent='연결 실패 · 이전 데이터 표시';loading=false;return}
+  const firstLoad=!D;build(T);
+  if(!window.CX_TEST_TABLES){try{applySocialApp(await fetchSocialApp());failed=failed.filter(k=>k!=='social')}catch(e){D.socialImageError='이미지 자동 연결 실패 · 일정은 시트 기록으로 표시합니다. 새로고침해 주세요.'}}
   loading=false;
-  if(failed.length>=SOURCES.filter(s=>!s.optional).length&&D){$('status').className='status err';$('statusText').textContent='연결 실패 · 이전 데이터 표시';return}
-  const firstLoad=!D;build(T);if(firstLoad||!state.anchor)state.anchor=defaultAnchor(state.mode);
+  if(firstLoad||!state.anchor)state.anchor=defaultAnchor(state.mode);
   const now=new Date();
   $('status').className='status '+(failed.length?'err':'live');
   $('statusText').textContent=(failed.length?'일부 연결 실패':'실시간')+' · '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+' 갱신';
