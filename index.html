@@ -193,6 +193,8 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.row.three{grid-template-columns:1fr 1fr}}
 @media(max-width:780px){.row.three,.row.wide,.row.two{grid-template-columns:1fr}.pies{grid-template-columns:1fr}.post{grid-template-columns:1fr auto;row-gap:4px}.post>span:empty{display:none}.mdl{padding:10px}.mdl-h{padding:14px 16px 12px}.mdl-h h3{font-size:17px}.mdl-b{padding:14px 16px 18px}.pie{gap:14px}.pie svg{width:180px;height:180px;margin:0 auto}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{justify-content:center}.k-v{font-size:22px}.funnel{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:420px){.wrap{padding:18px 14px 40px}.plabel{min-width:150px}}
+
+.social-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}.social-head button{cursor:pointer}.social-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.social-card{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card)}.social-user{display:flex;align-items:center;gap:9px;padding:12px;font-size:12px}.social-avatar{display:grid;place-items:center;background:linear-gradient(135deg,#8251d9,#ed6c76,#f4bc69);color:white;border-radius:50%;width:30px;height:30px;font-size:10px;font-weight:800}.social-cover{aspect-ratio:4/5;background:var(--bg);display:flex;position:relative;align-items:center;justify-content:center;overflow:hidden}.social-cover img,.social-cover video{width:100%;height:100%;object-fit:contain}.social-placeholder{text-align:center;padding:24px;color:var(--sub);line-height:1.8}.social-placeholder strong{display:block;font-size:22px;color:var(--text);margin-bottom:8px}.social-body{padding:14px}.social-body p{white-space:pre-wrap;line-height:1.7;font-size:12px;max-height:120px;overflow:auto}.social-body summary{cursor:pointer;font-size:12px;color:var(--sub)}.social-status{display:inline-block;padding:4px 8px;border-radius:20px;background:var(--bg);font-size:11px;color:var(--sub)}.social-status.future{color:var(--teal)}.social-media-nav{display:flex;align-items:center;gap:6px;justify-content:center;padding:6px}.social-media-nav button{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:5px 9px}.social-next{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.social-next span{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:12px}.social-period{font-weight:700}.social-note{font-size:12px;line-height:1.7;color:var(--sub)}@media(max-width:900px){.social-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:580px){.social-grid{grid-template-columns:1fr}.social-cover{max-height:460px}}
 </style></head><body><div class="wrap">
 <header class="top"><div><h1>CX 통합</h1><div class="sub">고객 반응 · 배송 품질 · SNS 씨딩을 한 장으로 · 매주 금요일 공유</div></div>
 <div class="actions"><span class="status" id="status"><i></i><span id="statusText">불러오는 중</span></span><button type="button" class="btn" id="refreshBtn">↻ 새로고침</button><div class="seg theme"><button type="button" id="themeLightBtn" title="라이트 모드">☀️</button><button type="button" id="themeDarkBtn" title="다크 모드">🌙</button></div></div></header>
@@ -214,9 +216,10 @@ const SOURCES=[
  {key:'review',book:'고객',sheets:['리뷰'],need:['리뷰 작성일','별점']},
  {key:'chat',book:'고객',sheets:['채팅상담'],need:['인입일','상담 내용 요약']},
  /* 씨딩: 성함·전화번호·발송주소·운송장(M,N,O,R열)은 불러오지 않습니다 */
+ {key:'social',book:'고객',sheets:[' SNS 관리','SNS 관리'],need:['일자','카테고리','내용'],tq:'select A,B,C,D,E,F,G,H,I,J,K,L,M,N'},
  {key:'seeding',book:'고객',sheets:['SNS 씨딩'],need:['씨딩ID','섭외 상태'],tq:'select A,B,C,D,E,F,G,H,I,J,K,L,P,Q,S,T,U,V,W,X,Y'}
 ];
-const LABEL={daily:'배송 › 일자별',incidents:'배송 › 배송사고',orders:'출고원장 › 주문 원장',inquiry:'고객 › 고객문의',review:'고객 › 리뷰',chat:'고객 › 채팅상담',seeding:'고객 › SNS 씨딩'};
+const LABEL={social:'고객 › SNS 관리',daily:'배송 › 일자별',incidents:'배송 › 배송사고',orders:'출고원장 › 주문 원장',inquiry:'고객 › 고객문의',review:'고객 › 리뷰',chat:'고객 › 채팅상담',seeding:'고객 › SNS 씨딩'};
 const PRODUCT={MKF:'맥세이프 킥프레임',PHS:'PH 스탠드',DSP:'DW 스탠드 플러스',FCB:'프레임케이스 에어범퍼',MCA:'맥세이프케이스 에어'};
 const $=id=>document.getElementById(id);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -253,7 +256,8 @@ function build(T){
   const chat=mapRows(T.chat,g=>{const d=pdate(g('인입일'));const text=g('상담 내용 요약');if(!d||!text)return null;return{d,src:'채팅',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),text}});
   const review=mapRows(T.review,g=>{const d=pdate(g('리뷰 작성일'));const star=num(g('별점'));if(!d||!star)return null;return{d,src:'리뷰',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),star,text:g('리뷰 내용'),memo:g('처리 메모'),imp:!!g('중요')}});
   const seeding=mapRows(T.seeding,g=>{const id=g('씨딩ID'),acc=g('계정');if(!/^S-/i.test(id)&&!/^@/.test(acc))return null;const st=g('상태');const posted=pdate(g('실제 게시일'));const ship=g('제품 발송 상태');return{id,camp:g('캠페인')||'캠페인 미기재',acc,fol:num(g('팔로워')),cat:g('카테고리'),confirmed:/완료/.test(g('섭외 상태')),cd:pdate(g('섭외 확정일')),sent:/발송/.test(ship)&&/완료/.test(ship)||!!pdate(g('발송일')),sd:pdate(g('발송일')),due:pdate(g('게시 약속일')),posted:posted||(/게시\s*완료/.test(st)?(pdate(g('발송일'))||''):null),pd:posted,url:g('게시 URL'),likes:num(g('좋아요')),cmts:num(g('댓글')),cost:num(g('원가'))*(num(g('수량'))||1)}});
-  D={daily,incidents,orders,inquiry,chat,review,seeding};
+  const social=T.social?T.social.rows.map((r,i)=>{const d=pdate(r[0]);if(!d)return null;const media=r.slice(4,14).map(safeMedia).filter(Boolean);return{id:i,d,cat:norm(r[1]),sub:norm(r[2]),text:String(r[3]||'').trim(),media}}).filter(Boolean):[];
+  D={daily,incidents,orders,inquiry,chat,review,seeding,social,socialAvailable:!!T.social};
   const shipDays=daily.filter(r=>r.out>0).map(r=>r.d);
   const mn=a=>a.length?a.reduce((x,y)=>x<y?x:y):null;
   FIRST={daily:mn(shipDays)};
@@ -403,8 +407,22 @@ function pie(entries,o){
   return'<div class="pie"><svg viewBox="0 0 180 180" role="img" aria-label="'+esc(o.label||'비중 원형그래프')+'">'+s+'</svg><div class="lg">'+lg+'</div></div>';
 }
 
+
+function safeMedia(value){
+  let v=String(value||'').trim(),m=v.match(/^=IMAGE\(\s*"([^"]+)"/i);if(m)v=m[1];
+  try{const u=new URL(v);return u.protocol==='https:'||u.protocol==='http:'?u.href:''}catch(e){return ''}
+}
+function socialRange(){const anchor=socialAnchor||TODAY;if(socialMode==='month')return periodOf('month',anchor);const dt=toD(anchor),start=addDays(anchor,-((dt.getDay()+6)%7));return{start,end:addDays(start,6)}}
+function socialSlots(range){const by={};(D.social||[]).filter(x=>inR(x.d,range)).forEach(x=>(by[x.d]=by[x.d]||[]).push(x));for(let d=range.start;d<=range.end;d=addDays(d,1))if([2,4,6].includes(toD(d).getDay())&&!by[d])by[d]=[{id:'empty-'+d,d,cat:'',sub:'',text:'',media:[]}];return Object.keys(by).sort().flatMap(d=>by[d])}
+function socialCard(x){const has=!!(x.cat||x.sub||x.text||x.media.length),status=!has?'미정':x.d>TODAY?'게시 예정':x.d===TODAY?'오늘 일정 · 게시 확인 필요':'지난 일정 · 게시 확인 필요';
+const media=x.media.length?'<img loading="lazy" src="'+esc(x.media[0])+'" alt="'+esc(x.sub||'콘텐츠 미리보기')+'" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="social-placeholder" hidden>이미지를 불러올 수 없습니다.<br>원본 주소와 공유 설정을 확인해 주세요.</div>':'<div class="social-placeholder"><strong>'+esc(x.sub||(has?'콘텐츠 준비 중':'아직 미정'))+'</strong>'+(has?'이미지 주소가 있으면 미리보기가 표시됩니다.':'화 · 목 · 토 정기 게시 일정')+'</div>';
+return '<article class="social-card"><div class="social-user"><span class="social-avatar">FB</span><b>FRAMEBY</b><span style="margin-left:auto">'+mdw(x.d)+'</span></div><div class="social-cover" data-social-cover="'+esc(x.id)+'">'+media+'</div>'+(x.media.length>1?'<div class="social-media-nav"><button type="button" data-slide="-1" data-social-id="'+x.id+'" aria-label="이전 이미지">‹</button><span id="social-count-'+x.id+'">1 / '+x.media.length+'</span><button type="button" data-slide="1" data-social-id="'+x.id+'" aria-label="다음 이미지">›</button></div>':'')+'<div class="social-body"><span class="social-status '+(x.d>TODAY?'future':'')+'">'+status+'</span><h3>'+esc(x.sub||x.cat||'게시 내용 미정')+'</h3>'+(x.cat?'<small>'+esc(x.cat)+'</small>':'')+(x.text?'<details><summary>게시글 내용 보기</summary><p>'+esc(x.text)+'</p></details>':'<p class="social-note">내용이 아직 등록되지 않았습니다.</p>')+'</div></article>'}
+function socialSection(){if(D.socialAvailable===false)return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2></div><div class="panel"><p class="social-note">SNS 관리 시트를 불러오지 못했습니다. 게시 일정 미정 여부를 확인할 수 없습니다. 시트 연결과 공유 설정을 확인해 주세요.</p></div>';const r=socialRange(),rows=socialSlots(r),next=socialSlots({start:addDays(TODAY,1),end:addDays(TODAY,14)}).slice(0,3),recorded=rows.filter(x=>x.cat||x.sub||x.text||x.media.length).length;
+return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2><span>화 · 목 · 토 정기 게시</span></div><div class="panel"><div class="social-head"><div class="seg"><button type="button" data-social-mode="week" class="'+(socialMode==='week'?'active':'')+'">주간</button><button type="button" data-social-mode="month" class="'+(socialMode==='month'?'active':'')+'">월간</button></div><div class="social-period">'+md(r.start)+' – '+md(r.end)+' · '+r.start.slice(0,4)+'</div><div class="seg"><button type="button" data-social-step="-1">‹ 이전</button><button type="button" data-social-today>이번 '+(socialMode==='week'?'주':'달')+'</button><button type="button" data-social-step="1">다음 ›</button></div></div><p class="social-note">등록 '+recorded+'건 · 미정 '+(rows.length-recorded)+'건 · SNS 관리 시트 기준</p><div class="social-grid">'+rows.map(socialCard).join('')+'</div><h3 style="margin-top:24px">다가오는 게시 일정</h3><div class="social-next">'+next.map(x=>'<span><b>'+mdw(x.d)+'</b> · '+esc(x.sub||x.cat||'미정')+'</span>').join('')+'</div><p class="social-note">지난 일정도 게시 완료 여부는 별도 확인이 필요합니다. E~N열의 이미지 주소는 최대 10장까지 미리보기로 표시합니다.</p></div>';
+}
+
 /* ---------- 팝업 내용 ---------- */
-let CTX=null,M=null,selectedCamp='';
+let CTX=null,M=null,selectedCamp='',socialMode='week',socialAnchor='';
 const sec=(t,r,body)=>'<div class="m-sec"><div class="m-h"><b>'+t+'</b>'+(r?'<span>'+r+'</span>':'')+'</div>'+body+'</div>';
 const mtabs=(list,cur)=>'<div class="seg m-tabs">'+list.map(([k,l])=>'<button type="button" data-tab="'+k+'" class="'+(k===cur?'active':'')+'">'+l+'</button>').join('')+'</div>';
 /* 선택한 기간이 속한 해의 1월 ~ 선택한 달 (연간 누적은 마지막 기록 달까지) */
@@ -464,7 +482,7 @@ const MODALS={
   praise(){const o=CTX.highs.find(q=>q.n===M.arg);if(!o)return{t:'높은 별점 리뷰',s:CTX.pl,h:EMPTY('해당 리뷰가 없습니다.')};
     return{t:'높은 별점 리뷰 · '+o.n,s:CTX.pl+' · '+o.list.length+'건',h:'<div class="rvlist" style="max-height:none">'+o.list.map(x=>rvCard(x,o.n,o.c,true)).join('')+'</div>'}},
   post(){const x=CTX.posts[+M.arg];if(!x)return{t:'게시물',s:'',h:EMPTY('게시물을 찾을 수 없습니다.')};
-    return{t:x.acc,s:'팔로워 '+fmt(x.fol)+(x.pd?' · '+md(x.pd)+' 게시':''),img:true,h:'<div class="ig"><iframe src="https://www.instagram.com/'+igPath(x.url)+'/embed/" title="'+esc(x.acc)+' 인스타그램 게시물" scrolling="no" loading="lazy"></iframe></div><div class="ig-f"><span>♥ <b>'+fmt(x.likes)+'</b> · 💬 <b>'+fmt(x.cmts)+'</b></span><a href="'+esc(x.url)+'" target="_blank" rel="noopener">인스타그램에서 열기 ↗</a></div>'}}
+    return{t:x.acc,s:'팔로워 '+fmt(x.fol)+(x.pd?' · '+md(x.pd)+' 게시':''),img:true,h:'<div class="ig"><iframe src="https://www.instagram.com/'+igPath(x.url)+'/embed/" title="'+esc(x.acc)+' 인스타그램 게시물" scrolling="no" loading="lazy"></iframe></div><div class="ig-f"><span>시트 기록 · ♥ <b>'+fmt(x.likes)+'</b> · 💬 <b>'+fmt(x.cmts)+'</b></span><a href="'+esc(x.url)+'" target="_blank" rel="noopener">인스타그램에서 열기 ↗</a></div>'}}
 };
 function drawM(){if(!M||!CTX)return;const r=MODALS[M.type]();$('mdlT').innerHTML=esc(r.t)+(r.s?'<small>'+esc(r.s)+'</small>':'');$('mdlB').innerHTML=r.h;$('mdl').classList.toggle('img',!!r.img)}
 
@@ -568,7 +586,7 @@ function render(){
    +'<div class="row two">'+panel('','var(--bad)','낮은 별점 리뷰',lows.length+'건','3점 이하 리뷰를 별점이 낮은 순으로 모았습니다.',rvList(lows,'이 기간에는 3점 이하 리뷰가 없습니다.'))
    +panel('hero','var(--accent)','높은 별점 주목할 리뷰',highN+'건','4점 이상 리뷰를 카테고리로 묶었습니다. 카테고리를 누르면 해당 리뷰를 모두 볼 수 있습니다.',highs.length?highs.map((o,i)=>rk(i,o.n,o.list.length,'건',o.list.length/highs[0].list.length*100,'','','data-open="praise" data-arg="'+esc(o.n)+'" aria-label="'+esc(o.n)+' 리뷰 보기"')).join(''):'<div class="empty">이 기간에는 카테고리에 해당하는 4점 이상 리뷰가 없습니다.</div>')+'</div>'
    +'<div class="sec"><h2>운영 · 마케팅 현황</h2></div>'
-   +'<div class="row">'+panel('','var(--teal)','SNS 씨딩','실제 게시 기준','섭외부터 게시까지 진행 상황과 게시 완료된 계정입니다. 계정을 누르면 게시물 이미지를 볼 수 있습니다.',seedHtml)+'</div>';
+   +'<div class="row">'+panel('','var(--teal)','SNS 씨딩','시트 기록 기준','섭외부터 게시까지 진행 상황입니다. 좋아요·댓글은 시트 입력값이며, 계정을 누르면 실제 게시물을 확인합니다.',seedHtml)+'</div>'+socialSection();
   CTX={mode,p,cur,c,partial,unit,y:cur.end.slice(0,4),pl:mode==='month'?(+p.start.slice(5,7))+'월':mode==='week'?md(p.start)+'–'+md(p.end):p.start.slice(0,4)+'년',prod,tally,oo,og,names,posts,rs,rtags,rcol,highs};
   if(M)drawM();
 }
@@ -611,6 +629,10 @@ document.addEventListener('click',e=>{
     return;
   }
   const campaign=e.target.closest('[data-campaign]');if(campaign){selectedCamp=campaign.dataset.campaign;render();return}
+  const sm=e.target.closest('[data-social-mode]');if(sm){socialMode=sm.dataset.socialMode;render();return}
+  const st=e.target.closest('[data-social-step]');if(st){const r=socialRange(),n=+st.dataset.socialStep;socialAnchor=socialMode==='week'?addDays(r.start,7*n):shift('month',r,n).start;render();return}
+  if(e.target.closest('[data-social-today]')){socialAnchor=TODAY;render();return}
+  const slide=e.target.closest('[data-slide]');if(slide){const x=(D.social||[]).find(x=>String(x.id)===slide.dataset.socialId);if(!x||!x.media.length)return;const cover=document.querySelector('[data-social-cover="'+x.id+'"]'),i=((+(cover.dataset.index||0))+(+slide.dataset.slide)+x.media.length)%x.media.length;cover.dataset.index=i;const img=cover.querySelector('img');img.src=x.media[i];img.hidden=false;img.nextElementSibling.hidden=true;$('social-count-'+x.id).textContent=(i+1)+' / '+x.media.length;return}
   const t=e.target.closest('[data-open]');if(t)openM(t.dataset.open,t.dataset.arg,t.dataset.tab);
 });
 document.addEventListener('keydown',e=>{
