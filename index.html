@@ -508,15 +508,23 @@ const MODALS={
   inc(){const opts=[['inc','총사고'],['miss','누락'],['wrong','오배송'],['dmg','분실/파손']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'inc',name=opts.find(x=>x[0]===tab)[1];
     return{t:'배송 사고 추이',s:rangeLab(),h:trendControls(opts,tab)+trendChart(name,x=>x.m[tab]||0,'var(--bad)')}},
   re(){
-    const opts=[['all','총 반품/교환'],['ret','반품'],['exch','교환']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'all';
-    const codes=[...new Set([...D.orders.filter(x=>inR(x.d,CTX.cur)).map(x=>norm(x.code).toUpperCase()),...D.claims.filter(x=>inR(x.d,CTX.cur)).map(x=>x.code)])].sort();
-    const product=codes.includes(M.reProduct)?M.reProduct:'',amount=(r,code)=>{if(!code){const m=metrics(r);return{out:m.out,ret:m.ret,exch:m.exch}}const rows=D.claims.filter(x=>inR(x.d,r)&&x.code===code);return{out:D.orders.filter(x=>inR(x.d,r)&&norm(x.code).toUpperCase()===code).reduce((a,x)=>a+x.qty,0),ret:rows.reduce((a,x)=>a+x.ret,0),exch:rows.reduce((a,x)=>a+x.exch,0)}},q=amount(CTX.cur,product),value=q=>tab==='all'?q.ret+q.exch:q[tab];
-    const ready=!product||(D.claimsAvailable&&D.ordersAvailable),rate=n=>ready&&q.out>0?pct(n/q.out):'계산 불가';
-    const buttons='<div class="chips">'+[['','전체'],...codes.map(code=>[code,code])].map(([code,label])=>'<button type="button" class="pill'+(product===code?' on':'')+'" data-re-product="'+esc(code)+'" aria-pressed="'+(product===code)+'">'+esc(label)+'</button>').join('')+'</div>';
-    const summary='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['총 반품/교환',q.ret+q.exch],['반품',q.ret],['교환',q.exch]].map(([label,n])=>'<div class="m-sec"><b>'+label+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n)+'</div><span>'+fmt(n)+(product?'개':'건')+' / '+fmt(q.out)+(product?'개 판매':'건 출고')+'</span></div>').join('')+'</div>';
-    const items=months().map(x=>{const r={start:x.r.start,end:minS(x.r.end,LAST)},q=amount(r,product);return{lab:x.lab,sel:x.sel,v:M.view==='count'?value(q):(q.out?value(q)/q.out:null)}}),name=opts.find(x=>x[0]===tab)[1];
-    const note=product?'제품별 = 클레임 접수일 기준 반품·교환 수량 ÷ 같은 기간 주문 원장의 해당 상품코드 출고 수량. 불량 교환·AS 교환을 포함합니다. 과거 출고 제품의 클레임도 포함되므로 동일 주문의 최종 반품률과는 다릅니다.':'전체 = 기존 일자별 시트의 반품·교환 건수 ÷ 총출고 건수. 제품별 수량 집계와 기준이 다를 수 있습니다.';
-    return{t:'반품 · 교환율',s:CTX.pl+' · '+(product||'전체'),h:sec('제품 선택','선택 기간에 출고 또는 클레임이 기록된 상품코드',buttons)+(!D.claimsAvailable||!D.ordersAvailable?'<p class="m-note">제품별 데이터 연결 실패 · 클레임 / 주문 원장 연결을 확인해 주세요.</p>':'')+sec('선택 기간 비율',esc(product||'전체 출고 기준'),summary)+'<p class="m-note">'+note+'</p>'+trendControls(opts,tab)+(ready?sec('월별 '+name+(M.view==='count'?' 수량':' 비율'),rangeLab(),M.view==='count'?bars(items,{zero:true,label:name+' 월별 수량'}):line(items,{label:name+' 월별 비율'})):EMPTY('연결 실패로 제품별 비율을 계산할 수 없습니다.'))};
+    const opts=[['all','반품/교환'],['ret','반품'],['exch','교환']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'all',name=opts.find(x=>x[0]===tab)[1];
+    const toggle='<div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button type="button" class="pill" data-re-mode aria-pressed="'+!!M.reMode+'">'+(M.reMode?'전체로 보기':'제품별로 보기')+'</button></div>';
+    if(!M.reMode)return{t:'반품 · 교환 추이',s:rangeLab(),h:toggle+trendControls(opts,tab)+trendChart(name,x=>tab==='all'?(x.m.ret||0)+(x.m.exch||0):(x.m[tab]||0),'var(--warn)')};
+    if(!D.claimsAvailable||!D.ordersAvailable)return{t:'제품별 반품 · 교환율',s:CTX.pl,h:toggle+EMPTY('제품별 데이터 연결 실패 · 클레임 / 주문 원장 연결을 확인해 주세요.')};
+    const codes=[...new Set(D.claims.filter(x=>inR(x.d,CTX.cur)&&(x.ret+x.exch)>0).map(x=>x.code))].sort();
+    const product=codes.includes(M.reProduct)?M.reProduct:'';
+    const buttons='<div class="chips">'+codes.map(code=>'<button type="button" class="pill'+(product===code?' on':'')+'" data-re-product="'+esc(code)+'" aria-pressed="'+(product===code)+'">'+esc(code)+'</button>').join('')+'</div>';
+    let h=toggle+sec('제품 선택','선택 기간에 반품·교환이 발생한 상품코드',codes.length?buttons:EMPTY('선택 기간에 반품·교환이 기록된 제품이 없습니다.'));
+    if(!product)return{t:'제품별 반품 · 교환율',s:CTX.pl,h:h+(codes.length?'<p class="m-note">제품을 선택해 주세요.</p>':'')};
+    const amount=r=>{const rows=D.claims.filter(x=>inR(x.d,r)&&x.code===product);return{out:D.orders.filter(x=>inR(x.d,r)&&norm(x.code).toUpperCase()===product).reduce((a,x)=>a+x.qty,0),ret:rows.reduce((a,x)=>a+x.ret,0),exch:rows.reduce((a,x)=>a+x.exch,0)}};
+    const q=amount(CTX.cur),rate=(n,d)=>d>0?pct(n/d):'계산 불가';
+    const comparison=(q,label)=>{const n=q.ret+q.exch,max=Math.max(q.out,n,1);return '<div style="margin:14px 0"><div class="m-h"><b>'+esc(label)+'</b><span>반품·교환율 '+rate(n,q.out)+'</span></div>'+[['판매수량',q.out,'var(--accent)'],['반품·교환 합계',n,'var(--warn)']].map(([l,v,c])=>'<div style="margin:12px 0"><div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px"><span>'+l+'</span><b>'+fmt(v)+'개</b></div><div style="height:22px;border-radius:5px;background:var(--line);overflow:hidden"><div style="height:100%;width:'+(v/max*100)+'%;background:'+c+';border-radius:5px"></div></div></div>').join('')+'</div>'};
+    const summary='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['총 반품/교환',q.ret+q.exch],['반품',q.ret],['교환',q.exch]].map(([l,n])=>'<div class="m-sec"><b>'+l+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span></div>').join('')+'</div>';
+    h+=sec(esc(product)+' · 선택 기간','판매수량 대비 반품·교환 수량',summary+comparison(q,CTX.pl));
+    h+='<p class="m-note">판매수량은 주문 원장의 출고일자 기준, 반품·교환은 클레임 접수일 기준입니다. 불량 교환·AS 교환을 포함하며, 과거 판매 제품의 접수가 포함될 수 있습니다. 판매수량이 0이면 비율을 계산하지 않습니다.</p>';
+    h+=sec('월별 판매 · 반품·교환',rangeLab(),months().map(x=>comparison(amount({start:x.r.start,end:minS(x.r.end,LAST)}),x.lab)).join(''));
+    return{t:'제품별 반품 · 교환율',s:CTX.pl+' · '+product,h};
   },
   voice(){const c=CTX.c;return{t:'고객 문의 · 상담',s:CTX.pl,h:sec('해당 기간 문의·상담 비중','총 '+fmt(c.voice)+'건',pie([['채팅',c.chat],['게시판',c.inq]],{segmentLabels:true,label:CTX.pl+' 문의 상담 비중'}))}},
   review(){const rv=CTX.c.rv,key=x=>x.product||'제품 미기재',by={};rv.forEach(x=>inc1(by,key(x)));const ents=topN(by,999);
@@ -683,6 +691,7 @@ document.addEventListener('click',e=>{
     const product=e.target.closest('[data-issue-product]');if(product&&M){M.product=product.dataset.issueProduct;M.analysis='';drawM();return}
     const analysis=e.target.closest('[data-analysis]');if(analysis&&M){M.analysis=M.analysis===analysis.dataset.analysis?'':analysis.dataset.analysis;drawM();return}
     const view=e.target.closest('[data-view]');if(view&&M){M.view=view.dataset.view;drawM();return}
+    const rm=e.target.closest('[data-re-mode]');if(rm&&M){M.reMode=!M.reMode;M.reProduct='';drawM();return}
     const rp=e.target.closest('[data-re-product]');if(rp&&M){M.reProduct=rp.dataset.reProduct;drawM();return}
     const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();return}
     if(e.target.closest('[data-keyword-more]')&&M){M.moreWords=true;drawM();return}
