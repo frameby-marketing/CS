@@ -509,6 +509,30 @@ function inquiryTags(x,category){if(/재입고/.test(category))return inquiryMod
 function issueAnalysis(rows,category){const by={};rows.forEach(x=>inquiryTags(x,category).forEach(k=>inc1(by,k)));const entries=topN(by,999),sel=by[M.analysis]?M.analysis:'',list=sel?rows.filter(x=>inquiryTags(x,category).includes(sel)):rows;return sec(/재입고/.test(category)?'재입고 요청 기종':'문의 내용별 요약','총 '+rows.length+'건 · 문의·상담 원문 키워드 기준',entries.map(([k,n])=>'<button type="button" class="review-break-row" data-analysis="'+esc(k)+'"><span>'+esc(k)+'</span><div class="bar"><i style="width:'+(n/Math.max(1,rows.length)*100)+'%;background:var(--accent)"></i></div><b>'+n+'건</b><em>'+pct(n/Math.max(1,rows.length),1)+'</em></button>').join(''))+'<p class="m-note">내용의 키워드를 이용한 참고용 자동 분류입니다. 원문에서 확인할 수 없는 기종은 추정하지 않습니다.'+(/재입고/.test(category)?' 한 문의에 여러 기종이 있으면 각각 집계하므로 비율 합계가 100%를 넘을 수 있습니다.':'')+'</p>'+sec('원문 확인'+(sel?' · '+esc(sel):''),list.length+'건','<button type="button" class="pill click" data-analysis="">전체 보기</button><div class="rvlist" style="max-height:none">'+list.map(x=>rvCard(x,x.src,'var(--accent)',true)).join('')+'</div>')}
 function productPie(rows,label){const by={};rows.forEach(x=>inc1(by,x.product||'제품 미기재'));return pie(topN(by,999),{label})}
 
+/* 주간 반품·교환: 요약 카드에서 해당 제품 구성 확인 */
+function weeklyClaims(){
+  const q=CTX.c,key=['all','ret','exch'].includes(M.weekClaim)?M.weekClaim:'',rate=(n,d)=>d>0?pct(n/d):'계산 불가';
+  const cards='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['all','총 반품/교환',q.ret+q.exch],['ret','반품',q.ret],['exch','교환',q.exch]].map(([k,label,n])=>'<button type="button" class="m-sec" data-week-claim="'+k+'" aria-pressed="'+(key===k)+'" style="cursor:pointer;text-align:left;color:var(--text);font:inherit;background:var(--card);border:1px solid '+(key===k?'var(--accent)':'var(--line)')+'"><b>'+label+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span><div style="font-size:12px;color:var(--sub);margin-top:10px">제품 구성 보기 '+(key===k?'▴':'▾')+'</div></button>').join('')+'</div>';
+  let detail='';
+  if(key){
+    const title=key==='ret'?'반품':key==='exch'?'교환':'반품·교환',value=x=>key==='all'?x.ret+x.exch:x[key];
+    if(!D.claimsAvailable||!D.ordersAvailable)detail=sec(title+' 제품 구성','',EMPTY('제품별 데이터 연결 실패 · 클레임 / 주문 원장 연결을 확인해 주세요.'));
+    else{
+      const by=new Map();
+      D.claims.filter(x=>inR(x.d,CTX.cur)&&value(x)>0).forEach(x=>{const code=norm(x.code).toUpperCase();by.set(code,(by.get(code)||0)+value(x))});
+      const sales=new Map();D.orders.filter(x=>inR(x.d,CTX.cur)).forEach(x=>{const code=norm(x.code).toUpperCase();sales.set(code,(sales.get(code)||0)+x.qty)});
+      const rows=[...by].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko')),total=rows.reduce((a,x)=>a+x[1],0),expected=key==='all'?q.ret+q.exch:q[key];
+      const cell='padding:12px 10px;border-bottom:1px solid var(--line);';
+      const table='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:right;font-size:14px"><thead><tr><th scope="col" style="'+cell+'text-align:left">상품코드</th><th scope="col" style="'+cell+'white-space:nowrap">판매수량</th><th scope="col" style="'+cell+'white-space:nowrap">'+title+' 수량 ↓</th><th scope="col" style="'+cell+'white-space:nowrap">'+title+'율</th></tr></thead><tbody>'+rows.map(([code,n])=>'<tr><th scope="row" style="'+cell+'text-align:left;overflow-wrap:anywhere">'+esc(code)+'</th><td style="'+cell+'white-space:nowrap">'+fmt(sales.get(code)||0)+'개</td><td style="'+cell+'font-weight:800;white-space:nowrap">'+fmt(n)+'개</td><td style="'+cell+'font-weight:800;white-space:nowrap">'+rate(n,sales.get(code)||0)+'</td></tr>').join('')+'</tbody></table></div>';
+      detail=sec(title+' 제품 구성',rows.length+'개 상품코드 · '+title+' '+fmt(total)+'개 · 수량 내림차순',rows.length?table:EMPTY('선택 기간에 기록된 '+title+' 제품이 없습니다.'));
+      if(total!==expected)detail+='<p class="m-note">요약 '+fmt(expected)+'개 / 제품별 원장 합계 '+fmt(total)+'개로 차이가 있습니다. 제품별 표는 클레임 원장 기준입니다.</p>';
+      detail+='<p class="m-note">판매수량은 선택 기간 주문 원장의 출고 수량, '+title+' 수량은 같은 기간 클레임 접수 수량입니다. 비율은 각 제품의 접수 수량 ÷ 판매수량으로 계산합니다. 이전 판매분의 접수가 포함될 수 있으며 판매수량이 0인 경우 계산 불가로 표시합니다.</p>';
+    }
+  }
+  const comparison=bars([{lab:'판매수량',v:q.out,sel:true},{lab:'반품·교환 합계',v:q.ret+q.exch,sel:true}],{zero:true,f:v=>fmt(v)+'개',label:'선택 기간 판매수량과 반품·교환 합계'});
+  return{t:'주간 반품 · 교환율',s:CTX.pl,h:sec('전체 총합 · 선택 기간','반품 또는 교환을 눌러 제품 구성을 확인하세요.',cards)+detail+sec('판매수량 · 반품/교환 합계','선택 기간',comparison)};
+}
+
 const MODALS={
   out(){const tot=months().reduce((t,x)=>t+(x.m.out||0),0);
     if(CTX.mode==='week'){
@@ -519,6 +543,7 @@ const MODALS={
   inc(){const opts=[['inc','총사고'],['miss','누락'],['wrong','오배송'],['dmg','분실/파손']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'inc',name=opts.find(x=>x[0]===tab)[1];
     return{t:'배송 사고 추이',s:rangeLab(),h:trendControls(opts,tab)+trendChart(name,x=>x.m[tab]||0,'var(--bad)')}},
   re(){
+    if(CTX.mode==='week')return weeklyClaims();
     const toggle='<div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button type="button" class="pill" data-re-mode aria-pressed="'+!!M.reMode+'">'+(M.reMode?'전체로 보기':'제품별로 보기')+'</button></div>';
     const rate=(n,d)=>d>0?pct(n/d):'계산 불가';
     const summary=q=>'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['총 반품/교환',q.ret+q.exch],['반품',q.ret],['교환',q.exch]].map(([l,n])=>'<div class="m-sec"><b>'+l+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span></div>').join('')+'</div>';
@@ -714,6 +739,7 @@ document.addEventListener('click',e=>{
     const product=e.target.closest('[data-issue-product]');if(product&&M){M.product=product.dataset.issueProduct;M.analysis='';drawM();return}
     const analysis=e.target.closest('[data-analysis]');if(analysis&&M){M.analysis=M.analysis===analysis.dataset.analysis?'':analysis.dataset.analysis;drawM();return}
     const view=e.target.closest('[data-view]');if(view&&M){M.view=view.dataset.view;drawM();return}
+    const wc=e.target.closest('[data-week-claim]');if(wc&&M&&M.type==='re'&&CTX.mode==='week'){M.weekClaim=M.weekClaim===wc.dataset.weekClaim?'':wc.dataset.weekClaim;drawM();return}
     const rm=e.target.closest('[data-re-mode]');if(rm&&M){M.reMode=!M.reMode;M.reProduct='';drawM();return}
     const rr=e.target.closest('[data-re-rate]');if(rr&&M){M.reRate=rr.dataset.reRate;drawM();return}
     const rp=e.target.closest('[data-re-product]');if(rp&&M){M.reProduct=rp.dataset.reProduct;drawM();return}
