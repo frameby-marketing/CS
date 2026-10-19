@@ -209,7 +209,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 <div class="banner" id="banner"></div>
 <div id="app"><div class="kpis"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
 <div class="mdl" id="mdl" hidden><div class="mdl-box" role="dialog" aria-modal="true" aria-labelledby="mdlT"><div class="mdl-h"><h3 id="mdlT"></h3><button type="button" class="mdl-x" id="mdlX" aria-label="닫기">✕</button></div><div class="mdl-b" id="mdlB"></div></div></div>
-<div class="foot">주간 = 전주 금요일 ~ 이번 주 목요일 · 비교는 직전 기간의 같은 일수 기준 · 배송 사고율 = (누락+오배송+분실/파손) ÷ 출고 · 카드와 순위를 누르면 상세가 열립니다 · 10분마다 자동 갱신<br><a href="https://docs.google.com/spreadsheets/d/1XA6e37oPd0ER8W4o-HM5OIkoETvh3xhugESKKOmWlf8/edit" target="_blank" rel="noopener">고객 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1sRKkaT6xPqsuZ_9fVupcwP-bGWTai4VITCgJNJucTxM/edit" target="_blank" rel="noopener">배송 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1LRc3ip_ak_zuba6RnvQO6U1TkCZV3ctTnFWFPoknPEs/edit" target="_blank" rel="noopener">출고원장 시트 ↗</a></div>
+<div class="foot">주간 = 오늘 기준 7일 전 ~ 어제 · 비교는 직전 기간의 같은 일수 기준 · 배송 사고율 = (누락+오배송+분실/파손) ÷ 출고 · 카드와 순위를 누르면 상세가 열립니다 · 10분마다 자동 갱신<br><a href="https://docs.google.com/spreadsheets/d/1XA6e37oPd0ER8W4o-HM5OIkoETvh3xhugESKKOmWlf8/edit" target="_blank" rel="noopener">고객 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1sRKkaT6xPqsuZ_9fVupcwP-bGWTai4VITCgJNJucTxM/edit" target="_blank" rel="noopener">배송 시트 ↗</a> · <a href="https://docs.google.com/spreadsheets/d/1LRc3ip_ak_zuba6RnvQO6U1TkCZV3ctTnFWFPoknPEs/edit" target="_blank" rel="noopener">출고원장 시트 ↗</a></div>
 </div>
 <script>
 (function(){
@@ -295,16 +295,16 @@ function build(T){
   FIRST.any=[FIRST.daily,FIRST.inquiry,FIRST.orders].filter(Boolean).sort()[0]||LAST;
 }
 
-/* ---------- 기간 (주간 = 금요일 ~ 목요일) ---------- */
+/* ---------- 기간 (주간 = 기준일로 끝나는 최근 7일) ---------- */
 const toD=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12)};
 const toS=dt=>dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
 const addDays=(s,n)=>{const d=toD(s);d.setDate(d.getDate()+n);return toS(d)};
 const diffDays=(a,b)=>Math.round((toD(b)-toD(a))/864e5);
 const minS=(a,b)=>a<b?a:b;
-function periodOf(mode,s){const d=toD(s);if(mode==='week'){const st=addDays(s,-((d.getDay()-5+7)%7));return{start:st,end:addDays(st,6)}}if(mode==='month')return{start:toS(new Date(d.getFullYear(),d.getMonth(),1,12)),end:toS(new Date(d.getFullYear(),d.getMonth()+1,0,12))};return{start:d.getFullYear()+'-01-01',end:d.getFullYear()+'-12-31'}}
-function shift(mode,p,k){const d=toD(p.start);if(mode==='week')return periodOf(mode,addDays(p.start,7*k));if(mode==='month')return periodOf(mode,toS(new Date(d.getFullYear(),d.getMonth()+k,1,12)));return periodOf(mode,toS(new Date(d.getFullYear()+k,0,1,12)))}
-/* 금요일 보고 기준: 기본 화면은 '어제'가 속한 주 → 금요일에 열면 방금 끝난 주(금~목)가 보입니다 */
-const defaultAnchor=mode=>mode==='week'?minS(LAST,addDays(TODAY,-1)):LAST;
+function periodOf(mode,s){const d=toD(s);if(mode==='week'){return{start:addDays(s,-6),end:s}}if(mode==='month')return{start:toS(new Date(d.getFullYear(),d.getMonth(),1,12)),end:toS(new Date(d.getFullYear(),d.getMonth()+1,0,12))};return{start:d.getFullYear()+'-01-01',end:d.getFullYear()+'-12-31'}}
+function shift(mode,p,k){const d=toD(p.start);if(mode==='week')return periodOf(mode,addDays(p.end,7*k));if(mode==='month')return periodOf(mode,toS(new Date(d.getFullYear(),d.getMonth()+k,1,12)));return periodOf(mode,toS(new Date(d.getFullYear()+k,0,1,12)))}
+/* 데이터 최종일과 무관하게 주간 기본 기간은 항상 오늘 7일 전 ~ 어제 */
+const defaultAnchor=mode=>mode==='week'?addDays(TODAY,-1):LAST;
 const W='일월화수목금토';
 const md=s=>{const d=toD(s);return(d.getMonth()+1)+'/'+d.getDate()};
 const mdw=s=>md(s)+'('+W[toD(s).getDay()]+')';
@@ -414,6 +414,17 @@ function line(items,o){
   pts.forEach(([cx,yy,x])=>{s+='<circle cx="'+cx+'" cy="'+yy+'" r="'+(x.sel?5:3.5)+'" fill="var(--card)" stroke="'+col+'" stroke-width="2"/><text x="'+cx+'" y="'+(yy-10)+'" text-anchor="middle" font-size="11" font-weight="'+(x.sel?800:600)+'" fill="'+(x.sel?'var(--text)':'var(--sub)')+'">'+pct(x.v)+'</text>'});
   return'<div class="chart"><svg viewBox="0 0 '+Wd+' '+H+'" role="img" aria-label="'+esc(o.label||'월별 추이 꺾은선그래프')+'">'+s+'</svg></div>';
 }
+/* 판매·반품·교환 수량의 월별 추이: 동일한 수량 축 사용 */
+function claimLines(rows){
+  if(!rows.length)return EMPTY('월별 기록이 없습니다.');
+  const series=[['out','판매','var(--accent)'],['ret','반품','var(--bad)'],['exch','교환','var(--warn)']],w=560,l=54,r=18,t=26,b=190,h=220;
+  const max=Math.max(1,...rows.flatMap(x=>series.map(([k])=>x[k]||0))),top=Math.ceil(max*1.15),x=i=>rows.length===1?(l+w-r)/2:l+(w-l-r)*i/(rows.length-1),y=v=>b-(b-t)*v/top;
+  let svg='';
+  [0,.5,1].forEach(k=>{const v=Math.round(top*k),yy=y(v);svg+='<line x1="'+l+'" x2="'+(w-r)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)"/><text x="'+(l-7)+'" y="'+(yy+4)+'" text-anchor="end" font-size="10" fill="var(--sub)">'+fmt(v)+'</text>'});
+  rows.forEach((q,i)=>{svg+='<text x="'+x(i)+'" y="'+(b+20)+'" text-anchor="middle" font-size="11" fill="var(--sub)">'+esc(q.lab)+'</text>'});
+  series.forEach(([k,label,color])=>{svg+='<polyline points="'+rows.map((q,i)=>x(i)+','+y(q[k]||0)).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2"/>';rows.forEach((q,i)=>{svg+='<circle cx="'+x(i)+'" cy="'+y(q[k]||0)+'" r="3.5" fill="'+color+'"><title>'+esc(q.lab+' '+label+' '+fmt(q[k]||0)+'개')+'</title></circle>'})});
+  return '<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">'+series.map(([k,label,color])=>'<span style="color:'+color+'">● '+label+'</span>').join('')+'</div><div class="chart"><svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="월별 판매 반품 교환 수량 추이">'+svg+'</svg></div>';
+}
 /* entries: [[이름, 값], …] 값 큰 순. o.pick=true면 조각·범례를 눌러 선택 */
 function pie(entries,o){
   o=o||{};const PA='data-'+(o.pa||'pick'),unit=o.unit||'건',tot=entries.reduce((t,e)=>t+e[1],0);
@@ -508,22 +519,26 @@ const MODALS={
   inc(){const opts=[['inc','총사고'],['miss','누락'],['wrong','오배송'],['dmg','분실/파손']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'inc',name=opts.find(x=>x[0]===tab)[1];
     return{t:'배송 사고 추이',s:rangeLab(),h:trendControls(opts,tab)+trendChart(name,x=>x.m[tab]||0,'var(--bad)')}},
   re(){
-    const opts=[['all','반품/교환'],['ret','반품'],['exch','교환']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'all',name=opts.find(x=>x[0]===tab)[1];
     const toggle='<div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button type="button" class="pill" data-re-mode aria-pressed="'+!!M.reMode+'">'+(M.reMode?'전체로 보기':'제품별로 보기')+'</button></div>';
-    if(!M.reMode)return{t:'반품 · 교환 추이',s:rangeLab(),h:toggle+trendControls(opts,tab)+trendChart(name,x=>tab==='all'?(x.m.ret||0)+(x.m.exch||0):(x.m[tab]||0),'var(--warn)')};
+    const rate=(n,d)=>d>0?pct(n/d):'계산 불가';
+    const summary=q=>'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['총 반품/교환',q.ret+q.exch],['반품',q.ret],['교환',q.exch]].map(([l,n])=>'<div class="m-sec"><b>'+l+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span></div>').join('')+'</div>';
+    const comparison=q=>bars([{lab:'판매수량',v:q.out,sel:true},{lab:'반품·교환 합계',v:q.ret+q.exch,sel:true}],{zero:true,f:v=>fmt(v)+'개',label:'선택 기간 판매수량과 반품·교환 합계'});
+    const trend=amount=>CTX.mode==='week'?'':sec('월별 판매 · 반품 · 교환 추이',rangeLab(),claimLines(months().map(x=>({lab:x.lab,...amount({start:x.r.start,end:minS(x.r.end,LAST)})}))));
+    if(!M.reMode){
+      const amount=r=>metrics(r),q=CTX.c;
+      return{t:'전체 반품 · 교환율',s:CTX.pl,h:toggle+sec('전체 총합 · 선택 기간','총출고 수량 기준',summary(q)+comparison(q))+trend(amount)};
+    }
     if(!D.claimsAvailable||!D.ordersAvailable)return{t:'제품별 반품 · 교환율',s:CTX.pl,h:toggle+EMPTY('제품별 데이터 연결 실패 · 클레임 / 주문 원장 연결을 확인해 주세요.')};
     const codes=[...new Set(D.claims.filter(x=>inR(x.d,CTX.cur)&&(x.ret+x.exch)>0).map(x=>x.code))].sort();
     const product=codes.includes(M.reProduct)?M.reProduct:'';
     const buttons='<div class="chips">'+codes.map(code=>'<button type="button" class="pill'+(product===code?' on':'')+'" data-re-product="'+esc(code)+'" aria-pressed="'+(product===code)+'">'+esc(code)+'</button>').join('')+'</div>';
-    let h=toggle+sec('제품 선택','선택 기간에 반품·교환이 발생한 상품코드',codes.length?buttons:EMPTY('선택 기간에 반품·교환이 기록된 제품이 없습니다.'));
+    let h=toggle+sec('제품 선택','선택 기간에 반품·교환이 발생한 상품코드입니다.',codes.length?buttons:EMPTY('선택 기간에 반품·교환이 기록된 제품이 없습니다.'));
     if(!product)return{t:'제품별 반품 · 교환율',s:CTX.pl,h:h+(codes.length?'<p class="m-note">제품을 선택해 주세요.</p>':'')};
     const amount=r=>{const rows=D.claims.filter(x=>inR(x.d,r)&&x.code===product);return{out:D.orders.filter(x=>inR(x.d,r)&&norm(x.code).toUpperCase()===product).reduce((a,x)=>a+x.qty,0),ret:rows.reduce((a,x)=>a+x.ret,0),exch:rows.reduce((a,x)=>a+x.exch,0)}};
-    const q=amount(CTX.cur),rate=(n,d)=>d>0?pct(n/d):'계산 불가';
-    const comparison=(q,label)=>{const n=q.ret+q.exch,max=Math.max(q.out,n,1);return '<div style="margin:14px 0"><div class="m-h"><b>'+esc(label)+'</b><span>반품·교환율 '+rate(n,q.out)+'</span></div>'+[['판매수량',q.out,'var(--accent)'],['반품·교환 합계',n,'var(--warn)']].map(([l,v,c])=>'<div style="margin:12px 0"><div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px"><span>'+l+'</span><b>'+fmt(v)+'개</b></div><div style="height:22px;border-radius:5px;background:var(--line);overflow:hidden"><div style="height:100%;width:'+(v/max*100)+'%;background:'+c+';border-radius:5px"></div></div></div>').join('')+'</div>'};
-    const summary='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['총 반품/교환',q.ret+q.exch],['반품',q.ret],['교환',q.exch]].map(([l,n])=>'<div class="m-sec"><b>'+l+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span></div>').join('')+'</div>';
-    h+=sec(esc(product)+' · 선택 기간','판매수량 대비 반품·교환 수량',summary+comparison(q,CTX.pl));
+    const q=amount(CTX.cur);
+    h+=sec(esc(product)+' · 선택 기간','판매수량 대비 반품·교환 수량',summary(q)+comparison(q));
     h+='<p class="m-note">판매수량은 주문 원장의 출고일자 기준, 반품·교환은 클레임 접수일 기준입니다. 불량 교환·AS 교환을 포함하며, 과거 판매 제품의 접수가 포함될 수 있습니다. 판매수량이 0이면 비율을 계산하지 않습니다.</p>';
-    h+=sec('월별 판매 · 반품·교환',rangeLab(),months().map(x=>comparison(amount({start:x.r.start,end:minS(x.r.end,LAST)}),x.lab)).join(''));
+    h+=trend(amount);
     return{t:'제품별 반품 · 교환율',s:CTX.pl+' · '+product,h};
   },
   voice(){const c=CTX.c;return{t:'고객 문의 · 상담',s:CTX.pl,h:sec('해당 기간 문의·상담 비중','총 '+fmt(c.voice)+'건',pie([['채팅',c.chat],['게시판',c.inq]],{segmentLabels:true,label:CTX.pl+' 문의 상담 비중'}))}},
@@ -562,7 +577,7 @@ function render(){
   if(mode==='week'){$('pLabel').textContent=mdw(p.start)+' – '+mdw(p.end);$('pSub').textContent=partial?(p.start<=LAST?mdw(LAST)+'까지 집계 · 진행 중인 주':'집계 전'):(p.end.slice(0,4)+'년 · '+(+p.end.slice(5,7))+'/'+(+p.end.slice(8))+' 보고분')}
   else if(mode==='month'){$('pLabel').textContent=p.start.slice(0,4)+'년 '+(+p.start.slice(5,7))+'월';$('pSub').textContent=partial?mdw(LAST)+'까지 집계':'월간 합계'}
   else{$('pLabel').textContent=p.start.slice(0,4)+'년 누적';$('pSub').textContent=partial?'1/1 – '+md(LAST)+' 누적':'연간 합계'}
-  $('nextBtn').disabled=shift(mode,p,1).start>LAST;
+  $('nextBtn').disabled=mode==='week'?p.end>=addDays(TODAY,-1):shift(mode,p,1).start>LAST;
   $('prevBtn').disabled=shift(mode,p,-1).end<(FIRST.any||'0');
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
 
@@ -662,7 +677,8 @@ async function load(){
   if(window.CX_TEST_TABLES){for(const s of SOURCES){try{T[s.key]=toTable(window.CX_TEST_TABLES[s.key],s.need)}catch(e){if(!s.optional)failed.push(s.key)}}}
   else{const res=await Promise.allSettled(SOURCES.map(fetchSource));res.forEach((r,i)=>{if(r.status==='fulfilled')T[SOURCES[i].key]=r.value;else if(!SOURCES[i].optional)failed.push(SOURCES[i].key)})}
   if(failed.length>=SOURCES.filter(s=>!s.optional).length&&D){$('status').className='status err';$('statusText').textContent='연결 실패 · 이전 데이터 표시';loading=false;return}
-  const firstLoad=!D;build(T);
+  const firstLoad=!D,oldToday=TODAY,followWeek=state.mode==='week'&&oldToday&&state.anchor===addDays(oldToday,-1);build(T);
+  if(followWeek&&oldToday!==TODAY)state.anchor=defaultAnchor('week');
   if(!window.CX_TEST_TABLES){try{applySocialApp(await fetchSocialApp());failed=failed.filter(k=>k!=='social')}catch(e){D.socialImageError='이미지 자동 연결 실패 · 일정은 시트 기록으로 표시합니다. 새로고침해 주세요.'}}
   loading=false;
   if(firstLoad||!state.anchor)state.anchor=defaultAnchor(state.mode);
@@ -674,8 +690,8 @@ async function load(){
   render();
 }
 document.querySelectorAll('#modeSeg button').forEach(b=>b.addEventListener('click',()=>{if(!D)return;state.mode=b.dataset.mode;state.anchor=defaultAnchor(state.mode);render()}));
-$('prevBtn').onclick=()=>{const p=shift(state.mode,periodOf(state.mode,state.anchor),-1);state.anchor=p.start;render()};
-$('nextBtn').onclick=()=>{const p=shift(state.mode,periodOf(state.mode,state.anchor),1);state.anchor=minS(p.start,LAST);render()};
+$('prevBtn').onclick=()=>{const p=shift(state.mode,periodOf(state.mode,state.anchor),-1);state.anchor=state.mode==='week'?p.end:p.start;render()};
+$('nextBtn').onclick=()=>{const p=shift(state.mode,periodOf(state.mode,state.anchor),1);state.anchor=state.mode==='week'?minS(p.end,addDays(TODAY,-1)):minS(p.start,LAST);render()};
 $('refreshBtn').onclick=load;
 
 /* ---------- 팝업 열고 닫기 ---------- */
