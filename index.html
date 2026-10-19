@@ -450,23 +450,63 @@ const SOCIAL_APP_URL='https://script.google.com/macros/s/AKfycbyB0SSM_QfAEnclVEz
 function fetchSocialApp(){return new Promise((resolve,reject)=>{
  const callback='cxSocial_'+Date.now()+'_'+Math.random().toString(36).slice(2),script=document.createElement('script');
  let finished=false;const finish=(error,data)=>{if(finished)return;finished=true;clearTimeout(timer);script.remove();delete window[callback];error?reject(error):resolve(data)};
- const timer=setTimeout(()=>finish(new Error('SNS 이미지 연결 시간 초과')),20000);
+ const timer=setTimeout(()=>finish(new Error('SNS 이미지 연결 시간 초과')),45000);
  window[callback]=data=>{if(!data||data.ok!==true||!Array.isArray(data.posts)){finish(new Error('SNS 이미지 응답 오류'));return}finish(null,data)};
  script.onerror=()=>finish(new Error('SNS 이미지 연결 실패'));script.src=SOCIAL_APP_URL+'?callback='+callback+'&_='+Date.now();document.head.appendChild(script);
 })}
 function applySocialApp(data){
- D.social=data.posts.map((x,i)=>({id:i,d:pdate(x.date),cat:norm(x.category),sub:norm(x.subcategory),text:String(x.text||''),media:(Array.isArray(x.images)?x.images:[]).slice(0,10).map(safeMedia).filter(Boolean),imageErrors:Number(x.imageErrors)||0})).filter(x=>x.d);
+ D.social=data.posts.map((x,i)=>({id:i,row:x.row,d:pdate(x.date),cat:norm(x.category),sub:norm(x.subcategory),text:String(x.text||''),media:(Array.isArray(x.images)?x.images:[]).slice(0,10).map(safeMedia).filter(Boolean),imageErrors:Number(x.imageErrors)||0})).filter(x=>x.d);
  D.socialAvailable=true;D.socialImageError='';D.socialUpdatedAt=String(data.updatedAt||'');
 }
 function safeMedia(value){
   let v=String(value||'').trim(),m=v.match(/^=IMAGE\(\s*"([^"]+)"/i);if(m)v=m[1];
   try{const u=new URL(v);return u.protocol==='https:'||u.protocol==='http:'?u.href:''}catch(e){return ''}
 }
+// 만료되거나 실패한 셀 이미지 주소는 서버에서 다시 받아 한 번만 재시도합니다.
+let socialImageRefresh=null,socialImageRefreshAt=0;
+function freshSocialImages(){
+ if(!socialImageRefresh||Date.now()-socialImageRefreshAt>60000){
+  socialImageRefreshAt=Date.now();
+  socialImageRefresh=fetchSocialApp();
+ }
+ return socialImageRefresh;
+}
+function socialImageLoaded(img){
+ img.hidden=false;const note=img.nextElementSibling;if(note)note.hidden=true;
+}
+function setSocialImage(img,url){
+ img.dataset.original=url;img.dataset.retried='';img.hidden=false;
+ const note=img.nextElementSibling;if(note)note.hidden=true;
+ img.referrerPolicy='no-referrer';img.src=url;
+}
+async function socialImageFailed(img){
+ const cover=img.closest('[data-social-cover]'),original=img.dataset.original||img.getAttribute('src');
+ const note=img.nextElementSibling;
+ img.hidden=true;if(note){note.hidden=false;note.textContent='이미지를 다시 불러오는 중입니다…'}
+ if(!img.dataset.retried&&cover){
+  img.dataset.retried='1';
+  const index=Number(cover.dataset.index||0),post=(D.social||[]).find(x=>String(x.id)===cover.dataset.socialCover);
+  try{
+   const data=await freshSocialImages();
+   if(!img.isConnected||Number(cover.dataset.index||0)!==index||(img.dataset.original||img.getAttribute('src'))!==original)return;
+   const fresh=post&&data.posts.find(x=>post.row!=null?x.row===post.row:pdate(x.date)===post.d&&norm(x.subcategory)===post.sub);
+   const url=fresh&&safeMedia((fresh.images||[])[index]);
+   if(url){
+    post.media[index]=url;
+    // 동일 주소에 대한 브라우저의 실패 응답 캐시도 재사용하지 않습니다.
+    const retry=new URL(url);if(retry.hostname==='docs.google.com'&&retry.pathname.startsWith('/sheets-images-rt/'))retry.searchParams.set('_cx_retry',Date.now());
+    img.referrerPolicy='no-referrer';img.src=retry.href;return;
+   }
+  }catch(e){/* 아래 안내와 수동 재시도로 복구할 수 있습니다. */}
+ }
+ if(!img.isConnected||(img.dataset.original||img.getAttribute('src'))!==original)return;
+ if(note)note.innerHTML='이미지를 불러오지 못했습니다.<br><button type="button" data-social-retry>이미지 다시 불러오기</button>';
+}
 const SOCIAL_FIRST='2026-10-10';
 function socialRange(){const anchor=(socialAnchor||TODAY)<SOCIAL_FIRST?SOCIAL_FIRST:(socialAnchor||TODAY);if(socialMode==='month')return periodOf('month',anchor);const dt=toD(anchor),start=addDays(anchor,-((dt.getDay()+6)%7));return{start,end:addDays(start,6)}}
 function socialSlots(range){const by={};(D.social||[]).filter(x=>x.d>=SOCIAL_FIRST&&inR(x.d,range)).forEach(x=>(by[x.d]=by[x.d]||[]).push(x));for(let d=range.start<SOCIAL_FIRST?SOCIAL_FIRST:range.start;d<=range.end;d=addDays(d,1))if([2,4,6].includes(toD(d).getDay())&&!by[d])by[d]=[{id:'empty-'+d,d,cat:'',sub:'',text:'',media:[]}];return Object.keys(by).sort().flatMap(d=>by[d])}
 function socialCard(x){const has=!!(x.cat||x.sub||x.text||x.media.length),status=!has?'미정':x.d>TODAY?'게시 예정':x.d===TODAY?'오늘 게시 예정':'게시 완료';
-const media=x.media.length?'<img loading="lazy" src="'+esc(x.media[0])+'" alt="'+esc(x.sub||'콘텐츠 미리보기')+'" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="social-placeholder" hidden>이미지를 불러올 수 없습니다.<br>원본 주소와 공유 설정을 확인해 주세요.</div>':'<div class="social-placeholder"><strong>'+esc(x.sub||(has?'콘텐츠 준비 중':'미정'))+'</strong>'+(x.imageErrors?'시트 이미지 일부를 읽지 못했습니다.':has?'등록된 이미지가 없습니다.':'화 · 목 · 토 정기 게시 일정')+'</div>';
+const media=x.media.length?'<img loading="lazy" referrerpolicy="no-referrer" src="'+esc(x.media[0])+'" alt="'+esc(x.sub||'콘텐츠 미리보기')+'" onload="socialImageLoaded(this)" onerror="socialImageFailed(this)"><div class="social-placeholder" hidden>이미지를 불러올 수 없습니다.<br>원본 주소와 공유 설정을 확인해 주세요.</div>':'<div class="social-placeholder"><strong>'+esc(x.sub||(has?'콘텐츠 준비 중':'미정'))+'</strong>'+(x.imageErrors?'시트 이미지 일부를 읽지 못했습니다.':has?'등록된 이미지가 없습니다.':'화 · 목 · 토 정기 게시 일정')+'</div>';
 return '<article class="social-card"><div class="social-user"><span class="social-avatar">FB</span><b>FRAMEBY</b><span style="margin-left:auto">'+mdw(x.d)+'</span></div><div class="social-cover" data-social-cover="'+esc(x.id)+'">'+media+'</div>'+(x.media.length>1?'<div class="social-media-nav"><button type="button" data-slide="-1" data-social-id="'+x.id+'" aria-label="이전 이미지">‹</button><span id="social-count-'+x.id+'">1 / '+x.media.length+'</span><button type="button" data-slide="1" data-social-id="'+x.id+'" aria-label="다음 이미지">›</button></div>':'')+'<div class="social-body"><span class="social-status '+(x.d>=TODAY?'future':'')+'">'+status+'</span><h3>'+esc(x.sub||x.cat||'게시 내용 미정')+'</h3>'+(x.cat?'<small>'+esc(x.cat)+'</small>':'')+(x.text?'<p>'+esc(x.text)+'</p>':'<p class="social-note">내용이 아직 등록되지 않았습니다.</p>')+'</div></article>'}
 function socialSection(){if(D.socialAvailable===false)return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2></div><div class="panel"><p class="social-note">SNS 관리 시트를 불러오지 못했습니다. 게시 일정 미정 여부를 확인할 수 없습니다. 시트 연결과 공유 설정을 확인해 주세요.</p></div>';const r=socialRange(),rows=socialSlots(r),next=socialSlots({start:addDays(TODAY,1),end:addDays(TODAY,14)}).slice(0,3),recorded=rows.filter(x=>x.cat||x.sub||x.text||x.media.length).length;
 return '<div class="sec"><h2>공식 인스타그램 게시 일정</h2><span>화 · 목 · 토 정기 게시</span></div><div class="panel"><div class="social-head"><div class="seg"><button type="button" data-social-mode="week" class="'+(socialMode==='week'?'active':'')+'">주간</button><button type="button" data-social-mode="month" class="'+(socialMode==='month'?'active':'')+'">월간</button></div><div class="social-period">'+md(r.start<SOCIAL_FIRST?SOCIAL_FIRST:r.start)+' – '+md(r.end)+' · '+r.start.slice(0,4)+'</div><div class="seg"><button type="button" data-social-step="-1" '+(r.start<=SOCIAL_FIRST?'disabled':'')+'>‹ 이전</button><button type="button" data-social-today>이번 '+(socialMode==='week'?'주':'달')+'</button><button type="button" data-social-step="1">다음 ›</button></div></div><p class="social-note">등록 '+recorded+'건 · 미정 '+(rows.length-recorded)+'건 · SNS 관리 시트 기준</p>'+(D.socialImageError?'<p class="social-note" role="status">'+esc(D.socialImageError)+'</p>':'')+'<div class="social-grid">'+rows.map(socialCard).join('')+'</div><h3 style="margin-top:24px">다가오는 게시 일정</h3><div class="social-next">'+next.map(x=>'<span><b>'+mdw(x.d)+'</b> · '+esc(x.sub||x.cat||'미정')+'</span>').join('')+'</div><p class="social-note">지난 날짜는 게시 완료로 간주합니다. E~N열의 셀 안 이미지를 최대 10장까지 자동으로 불러옵니다. 이미지와 일정은 10분마다 갱신합니다.</p></div>';
@@ -726,7 +766,8 @@ document.addEventListener('click',e=>{
   const sm=e.target.closest('[data-social-mode]');if(sm){socialMode=sm.dataset.socialMode;render();return}
   const st=e.target.closest('[data-social-step]');if(st){const r=socialRange(),n=+st.dataset.socialStep;socialAnchor=socialMode==='week'?addDays(r.start,7*n):shift('month',r,n).start;render();return}
   if(e.target.closest('[data-social-today]')){socialAnchor=TODAY;render();return}
-  const slide=e.target.closest('[data-slide]');if(slide){const x=(D.social||[]).find(x=>String(x.id)===slide.dataset.socialId);if(!x||!x.media.length)return;const cover=document.querySelector('[data-social-cover="'+x.id+'"]'),i=((+(cover.dataset.index||0))+(+slide.dataset.slide)+x.media.length)%x.media.length;cover.dataset.index=i;const img=cover.querySelector('img');img.src=x.media[i];img.hidden=false;img.nextElementSibling.hidden=true;$('social-count-'+x.id).textContent=(i+1)+' / '+x.media.length;return}
+  const retry=e.target.closest('[data-social-retry]');if(retry){const img=retry.closest('.social-cover').querySelector('img');socialImageRefresh=null;img.dataset.retried='';socialImageFailed(img);return}
+  const slide=e.target.closest('[data-slide]');if(slide){const x=(D.social||[]).find(x=>String(x.id)===slide.dataset.socialId);if(!x||!x.media.length)return;const cover=document.querySelector('[data-social-cover="'+x.id+'"]'),i=((+(cover.dataset.index||0))+(+slide.dataset.slide)+x.media.length)%x.media.length;cover.dataset.index=i;const img=cover.querySelector('img');setSocialImage(img,x.media[i]);$('social-count-'+x.id).textContent=(i+1)+' / '+x.media.length;return}
   const t=e.target.closest('[data-open]');if(t)openM(t.dataset.open,t.dataset.arg,t.dataset.tab);
 });
 document.addEventListener('keydown',e=>{
