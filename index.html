@@ -410,8 +410,8 @@ function line(items,o){
     s+='<text x="'+cx+'" y="'+(B+17)+'" text-anchor="middle" font-size="11" font-weight="'+wt+'" fill="'+fc+'">'+esc(x.lab)+'</text>';
     if(x.v!=null)pts.push([cx,y(x.v),x]);
   });
-  if(pts.length>1)s+='<polyline points="'+pts.map(q=>q[0]+','+q[1]).join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round"/>';
-  pts.forEach(([cx,yy,x])=>{s+='<circle cx="'+cx+'" cy="'+yy+'" r="'+(x.sel?5:3.5)+'" fill="var(--card)" stroke="'+col+'" stroke-width="2"/><text x="'+cx+'" y="'+(yy-10)+'" text-anchor="middle" font-size="11" font-weight="'+(x.sel?800:600)+'" fill="'+(x.sel?'var(--text)':'var(--sub)')+'">'+pct(x.v)+'</text>'});
+  for(let i=1;i<pts.length;i++){if(o.clearLabels&&items.indexOf(pts[i][2])-items.indexOf(pts[i-1][2])>1)continue;s+='<polyline points="'+[pts[i-1],pts[i]].map(q=>q[0]+','+q[1]).join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round"/>'}
+  pts.forEach(([cx,yy,x])=>{s+='<circle cx="'+cx+'" cy="'+yy+'" r="'+(x.sel?5:3.5)+'" fill="var(--card)" stroke="'+col+'" stroke-width="2"/><text x="'+cx+'" y="'+(yy-10)+'" text-anchor="middle" font-size="'+(o.clearLabels?13:11)+'" font-weight="'+(o.clearLabels?800:(x.sel?800:600))+'" fill="'+(o.clearLabels?col:(x.sel?'var(--text)':'var(--sub)'))+'" style="paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round">'+pct(x.v)+'</text>'});
   return'<div class="chart"><svg viewBox="0 0 '+Wd+' '+H+'" role="img" aria-label="'+esc(o.label||'월별 추이 꺾은선그래프')+'">'+s+'</svg></div>';
 }
 /* 판매·반품·교환 수량의 월별 추이: 동일한 수량 축 사용 */
@@ -523,10 +523,17 @@ const MODALS={
     const rate=(n,d)=>d>0?pct(n/d):'계산 불가';
     const summary=q=>'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['총 반품/교환',q.ret+q.exch],['반품',q.ret],['교환',q.exch]].map(([l,n])=>'<div class="m-sec"><b>'+l+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span></div>').join('')+'</div>';
     const comparison=q=>bars([{lab:'판매수량',v:q.out,sel:true},{lab:'반품·교환 합계',v:q.ret+q.exch,sel:true}],{zero:true,f:v=>fmt(v)+'개',label:'선택 기간 판매수량과 반품·교환 합계'});
-    const trend=amount=>CTX.mode==='week'?'':sec('월별 판매 · 반품 · 교환 추이',rangeLab(),claimLines(months().map(x=>({lab:x.lab,...amount({start:x.r.start,end:minS(x.r.end,LAST)})}))));
+    const trend=amount=>{
+      if(CTX.mode==='week')return '';
+      const key=M.reRate==='exch'?'exch':'ret',name=key==='ret'?'반품율':'교환율';
+      const controls='<div class="seg m-tabs">'+[['ret','반품율'],['exch','교환율']].map(([k,l])=>'<button type="button" data-re-rate="'+k+'" class="'+(key===k?'active':'')+'" aria-pressed="'+(key===k)+'">'+l+'</button>').join('')+'</div>';
+      const items=months().map(x=>{const q=amount({start:x.r.start,end:minS(x.r.end,LAST)});return{lab:x.lab,sel:x.sel,v:q.out>0?q[key]/q.out:null}});
+      return sec('월별 '+name+' 추이',rangeLab(),controls+line(items,{color:key==='ret'?'var(--bad)':'var(--warn)',label:'제품별 월별 '+name+' 추이',clearLabels:true}))+'<p class="m-note">각 월 판매수량 대비 해당 월 접수 수량의 비율입니다. 판매수량이 0인 월은 계산할 수 없어 점을 표시하지 않습니다.</p>';
+    };
     if(!M.reMode){
-      const amount=r=>metrics(r),q=CTX.c;
-      return{t:'전체 반품 · 교환율',s:CTX.pl,h:toggle+sec('전체 총합 · 선택 기간','총출고 수량 기준',summary(q)+comparison(q))+trend(amount)};
+      if(CTX.mode==='week')return{t:'전체 반품 · 교환율',s:CTX.pl,h:toggle+sec('전체 총합 · 선택 기간','총출고 수량 기준',summary(CTX.c)+comparison(CTX.c))};
+      const opts=[['all','총 반품/교환'],['ret','반품'],['exch','교환']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'all',name=opts.find(x=>x[0]===tab)[1];
+      return{t:'반품 · 교환 추이',s:rangeLab(),h:toggle+trendControls(opts,tab)+trendChart(name,x=>tab==='all'?(x.m.ret||0)+(x.m.exch||0):(x.m[tab]||0),'var(--warn)')};
     }
     if(!D.claimsAvailable||!D.ordersAvailable)return{t:'제품별 반품 · 교환율',s:CTX.pl,h:toggle+EMPTY('제품별 데이터 연결 실패 · 클레임 / 주문 원장 연결을 확인해 주세요.')};
     const codes=[...new Set(D.claims.filter(x=>inR(x.d,CTX.cur)&&(x.ret+x.exch)>0).map(x=>x.code))].sort();
@@ -708,6 +715,7 @@ document.addEventListener('click',e=>{
     const analysis=e.target.closest('[data-analysis]');if(analysis&&M){M.analysis=M.analysis===analysis.dataset.analysis?'':analysis.dataset.analysis;drawM();return}
     const view=e.target.closest('[data-view]');if(view&&M){M.view=view.dataset.view;drawM();return}
     const rm=e.target.closest('[data-re-mode]');if(rm&&M){M.reMode=!M.reMode;M.reProduct='';drawM();return}
+    const rr=e.target.closest('[data-re-rate]');if(rr&&M){M.reRate=rr.dataset.reRate;drawM();return}
     const rp=e.target.closest('[data-re-product]');if(rp&&M){M.reProduct=rp.dataset.reProduct;drawM();return}
     const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();return}
     if(e.target.closest('[data-keyword-more]')&&M){M.moreWords=true;drawM();return}
