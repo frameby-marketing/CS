@@ -512,7 +512,7 @@ function productPie(rows,label){const by={};rows.forEach(x=>inc1(by,x.product||'
 /* 주간 반품·교환: 요약 카드에서 해당 제품 구성 확인 */
 function weeklyClaims(){
   const q=CTX.c,key=['all','ret','exch'].includes(M.weekClaim)?M.weekClaim:'',rate=(n,d)=>d>0?pct(n/d):'계산 불가';
-  const cards='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+[['all','총 반품/교환',q.ret+q.exch],['ret','반품',q.ret],['exch','교환',q.exch]].map(([k,label,n])=>'<button type="button" class="m-sec" data-week-claim="'+k+'" aria-pressed="'+(key===k)+'" style="cursor:pointer;text-align:left;color:var(--text);font:inherit;background:var(--card);border:1px solid '+(key===k?'var(--accent)':'var(--line)')+'"><b>'+label+'</b><div style="font-size:26px;font-weight:800;margin:8px 0">'+rate(n,q.out)+'</div><span>'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</span><div style="font-size:12px;color:var(--sub);margin-top:10px">제품 구성 보기 '+(key===k?'▴':'▾')+'</div></button>').join('')+'</div>';
+  const cards='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">'+[['all','총 반품/교환',q.ret+q.exch,'var(--warn)'],['ret','반품',q.ret,'var(--bad)'],['exch','교환',q.exch,'var(--accent)']].map(([k,label,n,color])=>'<button type="button" class="kpi click" data-week-claim="'+k+'" aria-pressed="'+(key===k)+'" style="--c:'+color+';'+(k==='all'?'grid-column:1 / -1;':'')+'cursor:pointer;text-align:left;color:var(--text);font:inherit;'+(key===k?'border-color:'+color+';box-shadow:0 0 0 1px '+color+';':'')+'"><div class="k-l">'+label+'<span class="k-go">'+(key===k?'접기 ▴':'제품 보기 ›')+'</span></div><div class="k-v">'+rate(n,q.out)+'</div><div class="k-s">'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</div></button>').join('')+'</div>';
   let detail='';
   if(key){
     const title=key==='ret'?'반품':key==='exch'?'교환':'반품·교환',value=x=>key==='all'?x.ret+x.exch:x[key];
@@ -529,8 +529,7 @@ function weeklyClaims(){
       detail+='<p class="m-note">판매수량은 선택 기간 주문 원장의 출고 수량, '+title+' 수량은 같은 기간 클레임 접수 수량입니다. 비율은 각 제품의 접수 수량 ÷ 판매수량으로 계산합니다. 이전 판매분의 접수가 포함될 수 있으며 판매수량이 0인 경우 계산 불가로 표시합니다.</p>';
     }
   }
-  const comparison=bars([{lab:'판매수량',v:q.out,sel:true},{lab:'반품·교환 합계',v:q.ret+q.exch,sel:true}],{zero:true,f:v=>fmt(v)+'개',label:'선택 기간 판매수량과 반품·교환 합계'});
-  return{t:'주간 반품 · 교환율',s:CTX.pl,h:sec('전체 총합 · 선택 기간','반품 또는 교환을 눌러 제품 구성을 확인하세요.',cards)+detail+sec('판매수량 · 반품/교환 합계','선택 기간',comparison)};
+  return{t:'주간 반품 · 교환율',s:CTX.pl,h:sec('전체 총합 · 선택 기간','반품 또는 교환을 눌러 제품 구성을 확인하세요.',cards)+detail};
 }
 
 const MODALS={
