@@ -277,7 +277,8 @@ const inquiryCategory=value=>/^a\s*\/?\s*s(?:\s*문의)?$/i.test(norm(value))?'A
 function build(T){
   const daily=mapRows(T.daily,g=>{const d=pdate(g('날짜'));if(!d)return null;const own=num(g('자사몰 출고')),cp=num(g('쿠팡 출고')),out=num(g('출고 합계'))||own+cp,miss=num(g('누락')),wrong=num(g('오배송')),dmg=num(g('분실/파손')||g('파손'));return{d,out,own,cp,miss,wrong,dmg,inc:Math.max(miss+wrong+dmg,num(g('사고 합계'))),ret:num(g('반품')),exch:num(g('교환'))}});
   const incidents=mapRows(T.incidents,g=>{const d=pdate(g('접수일'));if(!d)return null;return{d,type:g('구분'),done:!!pdate(g('처리 완료일'))}});
-  const claims=mapRows(T.claims,g=>{const d=pdate(g('접수일')),code=norm(g('주문 제품')).toUpperCase(),type=g('구분'),qty=num(g('주문 수량'));if(!d||!code||qty<=0||!/반품|교환/.test(type))return null;return{d,code,qty,ret:/반품/.test(type)?qty:0,exch:!/반품/.test(type)&&/교환/.test(type)?qty:0}});
+  // 반품은 기존 접수일, 교환은 처리 완료일 기준. 미완료 교환은 집계하지 않습니다.
+  const claims=mapRows(T.claims,g=>{const type=g('구분'),isReturn=/반품/.test(type),qty=num(g('주문 수량')),code=norm(g('주문 제품')).toUpperCase();const d=pdate(isReturn?g('접수일'):(g('처리 완료일')||g('처리완료일')));if(!d||qty<=0||!/반품|교환/.test(type)||(isReturn&&!code))return null;return{d,code:code||'제품 미확인',qty,ret:isReturn?qty:0,exch:!isReturn&&/교환/.test(type)?qty:0}});
   const orders=mapRows(T.orders,g=>{const d=pdate(g('출고일자'));const code=g('상품코드');if(!d||!code)return null;return{d,code,name:g('주문 내역'),qty:num(g('수량'))||1}});
   const inquiry=mapRows(T.inquiry,g=>{const d=pdate(g('문의일'));const text=g('문의 내용');if(!d||!text)return null;return{d,src:'문의',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:inquiryCategory(g('Category')||g('카테고리')),text}});
   const chat=mapRows(T.chat,g=>{const d=pdate(g('인입일'));const text=g('상담 내용 요약');if(!d||!text)return null;return{d,src:'채팅',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:inquiryCategory(g('Category')||g('카테고리')),text}});
@@ -569,13 +570,19 @@ function periodClaims(){
       const by=new Map();
       D.claims.filter(x=>inR(x.d,CTX.cur)&&value(x)>0).forEach(x=>{const code=norm(x.code).toUpperCase();by.set(code,(by.get(code)||0)+value(x))});
       const sales=new Map();D.orders.filter(x=>inR(x.d,CTX.cur)).forEach(x=>{const code=norm(x.code).toUpperCase();sales.set(code,(sales.get(code)||0)+x.qty)});
-      const rows=[...by].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko')),total=rows.reduce((a,x)=>a+x[1],0),expected=q[key],missing=Math.max(0,expected-total);
+      const rows=[...by].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko')),total=rows.reduce((a,x)=>a+x[1],0),expected=q[key],missing=key==='exch'?0:Math.max(0,expected-total);
       const cell='padding:12px 10px;border-bottom:1px solid var(--line);';
       const table='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:right;font-size:14px"><thead><tr><th scope="col" style="'+cell+'text-align:left">상품코드</th><th scope="col" style="'+cell+'white-space:nowrap">판매수량</th><th scope="col" style="'+cell+'white-space:nowrap">'+title+' 수량 ↓</th><th scope="col" style="'+cell+'white-space:nowrap">'+title+'율</th></tr></thead><tbody>'+rows.map(([code,n])=>'<tr><th scope="row" style="'+cell+'text-align:left;overflow-wrap:anywhere">'+esc(code)+'</th><td style="'+cell+'white-space:nowrap">'+fmt(sales.get(code)||0)+'개</td><td style="'+cell+'font-weight:800;white-space:nowrap">'+fmt(n)+'개</td><td style="'+cell+'font-weight:800;white-space:nowrap">'+rate(n,sales.get(code)||0)+'</td></tr>').join('')+(missing?'<tr><th scope="row" style="'+cell+'text-align:left">제품 미확인</th><td style="'+cell+'">—</td><td style="'+cell+'font-weight:800">'+fmt(missing)+'개</td><td style="'+cell+'">—</td></tr>':'')+'</tbody><tfoot><tr><th scope="row" style="'+cell+'text-align:left">합계</th><td style="'+cell+'">—</td><td style="'+cell+'font-weight:800">'+fmt(total+missing)+'개</td><td style="'+cell+'">—</td></tr></tfoot></table></div>';
       detail=sec(title+' 제품 구성',rows.length+'개 상품코드'+(missing?' + 제품 미확인':'')+' · '+title+' '+fmt(total+missing)+'개 · 수량 내림차순',(rows.length||missing)?table:EMPTY('선택 기간에 기록된 '+title+' 제품이 없습니다.'));
       if(missing)detail+='<p class="m-note">일자별 요약 '+fmt(expected)+'개 중 클레임 원장에서 상품코드가 확인되는 수량은 '+fmt(total)+'개입니다. 나머지 '+fmt(missing)+'개는 제품 미확인으로 표시했습니다. 클레임 원장의 접수일·구분·상품코드·수량을 확인해 주세요.</p>';
-      if(total>expected)detail+='<p class="m-note">클레임 원장 '+fmt(total)+'개가 일자별 요약 '+fmt(expected)+'개보다 많습니다. 두 원장의 수량 확인이 필요합니다.</p>';
+      if(key!=='exch'&&total>expected)detail+='<p class="m-note">클레임 원장 '+fmt(total)+'개가 일자별 요약 '+fmt(expected)+'개보다 많습니다. 두 원장의 수량 확인이 필요합니다.</p>';
+      if(key==='exch'){
+        detail+='<p class="m-note">일자별 날짜 기준 교환 '+fmt(expected)+'개 · 클레임 처리완료일 기준 교환 '+fmt(total)+'개 · '+(total===expected?'합계 일치':'합계 불일치 (차이 '+fmt(Math.abs(total-expected))+'개)')+'</p>';
+        if(total!==expected)detail+='<p class="m-note">두 시트의 해당 기간 교환 수량과 처리완료일을 확인해 주세요. 제품별 합계는 클레임에 기록된 실제 수량입니다.</p>';
+        detail+='<p class="m-note">판매수량은 선택 기간 주문 원장의 출고 수량, 교환 수량은 같은 기간 클레임 처리완료일 기준 주문 수량 합계입니다. 처리완료일이 없는 교환은 제외합니다. 교환율은 교환 수량 ÷ 판매수량으로 계산하며, 이전 판매분의 교환이 포함될 수 있습니다. 판매수량이 0인 경우 계산 불가로 표시합니다.</p>';
+      }else{
       detail+='<p class="m-note">판매수량은 선택 기간 주문 원장의 출고 수량, '+title+' 수량은 같은 기간 클레임 접수 수량입니다. 비율은 각 제품의 접수 수량 ÷ 판매수량으로 계산합니다. 이전 판매분의 접수가 포함될 수 있으며 판매수량이 0인 경우 계산 불가로 표시합니다.</p>';
+      }
     }
   }
   return{t:(CTX.mode==='week'?'주간':CTX.mode==='month'?'월간':'연간 누적')+' 반품 · 교환율',s:CTX.pl,h:sec('전체 총합 · 선택 기간','반품 또는 교환을 눌러 제품 구성을 확인하세요.',cards)+detail};
