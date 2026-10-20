@@ -201,6 +201,17 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .summary-product-lines{margin-top:14px}.summary-product-line{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line);font-size:18px;line-height:1.55;overflow-wrap:anywhere}.summary-product-line:last-child{border-bottom:0}.summary-product-line b{font-size:16px;font-weight:750}.summary-product-line span{color:var(--text)}@media(max-width:580px){.summary-product-line{font-size:16px}.summary-product-line b{font-size:15px}}
 .review-keywords{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px 20px;padding:22px 0}.review-keyword{font-size:23px;font-weight:750;line-height:1.4;color:var(--text);letter-spacing:-.6px}.review-keyword.major{font-size:30px;color:var(--accent)}.review-keyword small{font-size:11px;vertical-align:super;margin-left:5px;color:var(--sub);font-weight:500}.keyword-empty{font-size:17px;color:var(--sub)}@media(max-width:580px){.review-keyword{font-size:20px}.review-keyword.major{font-size:25px}.review-keywords{gap:12px 16px}}
 .review-summary{background:transparent;border:0;padding:12px 0}.review-keywords{gap:10px;padding:18px 0 8px}.review-keyword,.review-keyword.major{display:inline-flex;align-items:center;padding:11px 17px;border-radius:999px;background:var(--grid);color:var(--text);font-size:17px;font-weight:650;line-height:1.4;letter-spacing:-.4px;border:0}.keyword-more{cursor:pointer;font-size:20px;font-weight:750}.keyword-more:hover{filter:brightness(.94)}[data-theme="light"] .review-keyword{background:#f3f5f7;color:#17191c}@media(max-width:580px){.review-keywords{gap:8px}.review-keyword,.review-keyword.major{font-size:15px;padding:10px 14px}}
+
+.seed-group{border:1px solid var(--line);border-radius:12px;margin-top:10px;overflow:hidden}
+.seed-group>summary{cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px;font-size:13px;font-weight:700;list-style:none}
+.seed-group>summary::-webkit-details-marker{display:none}
+.seed-group>summary::after{content:'펼치기 ▾';margin-left:auto;font-size:11px;color:var(--sub);font-weight:500}
+.seed-group[open]>summary::after{content:'접기 ▴'}
+.seed-group>summary small{color:var(--sub);font-weight:500}
+.seed-group-body{padding:0 14px 8px}
+.seed-group .post{grid-template-columns:minmax(0,1fr) auto}
+.seed-group .post small{display:block;margin:4px 0 0}
+.seed-group.seed-unavailable>summary,.seed-group .pill.bad{color:var(--bad)}
 </style></head><body><div class="wrap">
 <header class="top"><div><h1>CX 통합</h1><div class="sub">고객 반응 · 배송 품질 · SNS 씨딩을 한 장으로 · 매주 금요일 공유</div></div>
 <div class="actions"><span class="status" id="status"><i></i><span id="statusText">불러오는 중</span></span><button type="button" class="btn" id="refreshBtn">↻ 새로고침</button><div class="seg theme"><button type="button" id="themeLightBtn" title="라이트 모드">☀️</button><button type="button" id="themeDarkBtn" title="다크 모드">🌙</button></div></div></header>
@@ -559,6 +570,16 @@ function issueAnalysis(rows,category){const by={};rows.forEach(x=>inquiryTags(x,
 function productPie(rows,label){const by={};rows.forEach(x=>inc1(by,x.product||'제품 미기재'));return pie(topN(by,999),{label})}
 
 /* 주간 반품·교환: 요약 카드에서 해당 제품 구성 확인 */
+function seedingGroups(rows){
+  const unavailable=x=>/섭외\s*불가/.test(x.recruit||'');
+  const groups=[
+    ['섭외완료',rows.filter(x=>x.confirmed&&!unavailable(x)),true,''],
+    ['진행중',rows.filter(x=>!x.confirmed&&!unavailable(x)),false,''],
+    ['섭외불가',rows.filter(unavailable),false,' seed-unavailable']
+  ];
+  return groups.map(([title,list,open,cls])=>'<details class="seed-group'+cls+'"'+(open?' open':'')+'><summary><span>'+title+'</span><small>'+fmt(list.length)+'명</small></summary><div class="seed-group-body">'+(list.length?list.slice().sort((a,b)=>b.fol-a.fol).map(x=>'<div class="post"><span><b>'+esc(x.acc)+'</b><small>팔로워 '+fmt(x.fol)+' · '+esc(x.cat||'분류 미기재')+'</small></span><span class="pill '+(unavailable(x)?'bad':x.confirmed?'now':'')+'">'+esc(unavailable(x)?'섭외불가':x.confirmed?'섭외완료':x.recruit||'섭외 후보')+'</span></div>').join(''):'<div class="empty">해당 계정이 없습니다.</div>')+'</div></details>').join('');
+}
+
 function periodClaims(){
   const q=CTX.c,key=['ret','exch'].includes(M.weekClaim)?M.weekClaim:'',rate=(n,d)=>d>0?pct(n/d):'계산 불가';
   const cards='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">'+[['all','총 반품/교환',q.ret+q.exch,'var(--warn)'],['ret','반품',q.ret,'var(--bad)'],['exch','교환',q.exch,'var(--accent)']].map(([k,label,n,color])=>{const total=k==='all',tag=total?'div':'button';return '<'+tag+(total?'':' type="button"')+' class="kpi'+(total?'':' click')+'"'+(total?'':' data-week-claim="'+k+'" aria-pressed="'+(key===k)+'"')+' style="--c:'+color+';'+(total?'grid-column:1 / -1;':'cursor:pointer;')+'text-align:left;color:var(--text);font:inherit;'+(key===k?'border-color:'+color+';box-shadow:0 0 0 1px '+color+';':'')+'"><div class="k-l">'+label+(total?'':'<span class="k-go">'+(key===k?'접기 ▴':'제품 보기 ›')+'</span>')+'</div><div class="k-v">'+rate(n,q.out)+'</div><div class="k-s">'+fmt(n)+'개 / 판매 '+fmt(q.out)+'개</div></'+tag+'>'}).join('')+'</div>';
@@ -690,7 +711,8 @@ function render(){
     seedHtml='<div class="seg m-tabs">'+campList.map(([name])=>'<button type="button" data-campaign="'+esc(name)+'" class="'+(name===cname?'active':'')+'">'+esc(name.replace(/^.*·\s*/,''))+'</button>').join('')+'</div><div class="camp">'+esc(cname)+'<span>캠페인 누적 · '+'발송 후 미게시 '+rows.filter(x=>x.sent&&!x.posted).length+'명 · 게시 지연 '+campOverdue.length+'명'+'</span></div>'
       +'<div class="funnel">'+fs('섭외 후보',N,N)+fs('섭외 완료',conf,N)+fs('제품 발송',sent,N)+fs('게시 완료',posted,N,'명 · '+(sent?Math.round(posted/sent*100):0)+'%')+'</div>'
       +'<div class="sdstat"><span>게시 계정 도달<b>'+fmt(reach)+'</b></span><span>좋아요+댓글<b>'+fmt(eng)+'</b></span><span>발송 제품 원가<b>₩'+fmt(cost)+'</b></span>'+(eng&&cost?'<span>반응 1건당<b>₩'+fmt(cost/eng)+'</b></span>':'')+'</div>'
-      +(/프레임팁/.test(cname)?'<div class="m-note">섭외 후보 · 섭외 완료 우선, 그룹별 팔로워 많은 순</div>'+rows.slice().sort((a,b)=>Number(b.confirmed)-Number(a.confirmed)||b.fol-a.fol).map(x=>'<div class="post"><span><b>'+esc(x.acc)+'</b><small>팔로워 '+fmt(x.fol)+' · '+esc(x.cat||'분류 미기재')+'</small></span><span class="pill '+(x.confirmed?'now':'')+'">'+esc(x.confirmed?'섭외 완료':x.recruit||'섭외 후보')+'</span></div>').join(''):posts.length?posts.map((x,i)=>{const ig=igPath(x.url);return'<div class="post'+(ig?' click" data-open="post" data-arg="'+i+'" role="button" tabindex="0" aria-label="'+esc(x.acc)+' 게시물 이미지 보기':'')+'"><span><b>'+esc(x.acc)+'</b><small>팔로워 '+fmt(x.fol)+(x.pd?' · '+md(x.pd)+' 게시':'')+'</small>'+(x.pd&&inR(x.pd,cur)?'<span class="now">이번 '+unit+'</span>':'')+'</span><span class="eng">♥ '+fmt(x.likes)+' · 💬 '+fmt(x.cmts)+'</span>'+(ig?'<span class="see">이미지 보기</span>':'<span></span>')+(/^https?:\/\//.test(x.url)?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">게시물 ↗</a>':'<span></span>')+'</div>'}).join(''):'<div class="pd" style="margin:4px 0 0">아직 게시된 계정이 없습니다.</div>')
+      +seedingGroups(rows)
+      +(/프레임팁/.test(cname)?'':posts.length?posts.map((x,i)=>{const ig=igPath(x.url);return'<div class="post'+(ig?' click" data-open="post" data-arg="'+i+'" role="button" tabindex="0" aria-label="'+esc(x.acc)+' 게시물 이미지 보기':'')+'"><span><b>'+esc(x.acc)+'</b><small>팔로워 '+fmt(x.fol)+(x.pd?' · '+md(x.pd)+' 게시':'')+'</small>'+(x.pd&&inR(x.pd,cur)?'<span class="now">이번 '+unit+'</span>':'')+'</span><span class="eng">♥ '+fmt(x.likes)+' · 💬 '+fmt(x.cmts)+'</span>'+(ig?'<span class="see">이미지 보기</span>':'<span></span>')+(/^https?:\/\//.test(x.url)?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">게시물 ↗</a>':'<span></span>')+'</div>'}).join(''):'<div class="pd" style="margin:4px 0 0">아직 게시된 계정이 없습니다.</div>')
       +(campOverdue.length?'<div class="warnline">게시 약속일이 지났는데 아직 미게시 <b>'+campOverdue.length+'명</b> · '+esc(campOverdue.slice(0,4).map(x=>x.acc).join(', '))+(campOverdue.length>4?' 외 '+(campOverdue.length-4)+'명':'')+'</div>':'');
   }
 
