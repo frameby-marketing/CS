@@ -48,7 +48,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .k-d{font-size:11.5px;font-weight:700;color:var(--sub);min-height:16px}
 .k-d.good{color:var(--good)}.k-d.bad{color:var(--bad)}
 .k-d span{font-weight:500;color:var(--sub);margin-left:3px}
-.k-s{font-size:11px;color:var(--sub);margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-s{font-size:11px;color:var(--sub);margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);white-space:normal;overflow-wrap:anywhere;line-height:1.6}.k-s.k-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px;row-gap:2px}.k-details span{min-width:0}.out-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}
 /* 섹션 */
 .sec{display:flex;align-items:baseline;gap:10px;margin:26px 2px 10px}
 .sec h2{font-size:15.5px;margin:0;letter-spacing:-.02em}
@@ -379,7 +379,7 @@ function delta(cur,prev,kind,good){
   const cls=Math.abs(v)<1e-9||!good?'':((good==='low')===(v<0)?'good':'bad');
   return'<div class="k-d '+cls+'">'+txt+'<span>'+CMP+'</span></div>';
 }
-const kpi=(label,value,unit,d,subline,color,open)=>'<div class="kpi click" style="--c:'+color+'" data-open="'+open+'" role="button" tabindex="0" aria-label="'+esc(label)+' 상세 보기"><div class="k-l">'+esc(label)+'<span class="k-go">자세히 ›</span></div><div class="k-v">'+esc(value)+'<em>'+esc(unit)+'</em></div>'+d+'<div class="k-s" title="'+esc(subline)+'">'+esc(subline)+'</div></div>';
+const kpi=(label,value,unit,d,subline,color,open)=>'<div class="kpi click" style="--c:'+color+'" data-open="'+open+'" role="button" tabindex="0" aria-label="'+esc(label)+' 상세 보기"><div class="k-l">'+esc(label)+'<span class="k-go">자세히 ›</span></div><div class="k-v">'+esc(value)+'<em>'+esc(unit)+'</em></div>'+d+'<div class="k-s'+(['out','voice'].includes(open)?' k-details':'')+'" title="'+esc(subline)+'">'+(['out','voice'].includes(open)?subline.split(' · ').map(x=>'<span>'+esc(x)+'</span>').join(''):esc(subline))+'</div></div>';
 const rk=(i,name,val,unit,width,sub,extra,attr)=>'<div class="rk'+(attr?' click" role="button" tabindex="0" '+attr:'"')+'><div class="rk-h"><span class="rk-no">'+(i+1)+'</span><span class="rk-nm" title="'+esc(name)+'">'+esc(name)+'</span><span class="rk-v">'+fmt(val)+'<small>'+unit+'</small>'+(extra||'')+'</span></div><div class="rk-bar"><i style="width:'+Math.max(4,width)+'%"></i></div>'+(sub?'<div class="rk-s'+(attr?' multi':'')+'">'+sub+'</div>':'')+'</div>';
 const panel=(cls,color,title,right,desc,body)=>'<section class="panel '+cls+'" style="--c:'+color+'"><div class="ph"><h3>'+title+'</h3><span>'+right+'</span></div><p class="pd">'+desc+'</p>'+body+'</section>';
 
@@ -447,17 +447,27 @@ function pie(entries,o){
   const top=entries.slice(0,7),rest=entries.slice(7),restN=rest.reduce((t,e)=>t+e[1],0);
   const segs=top.map((e,i)=>({k:e[0],n:e[1],c:o.colors&&o.colors[e[0]]||PAL[i%PAL.length]}));if(restN)segs.push({k:'기타 '+rest.length+'개',n:restN,c:'var(--sub)',other:true});
   const C=90,RO=84,RI=50,pt=(r,a)=>(C+r*Math.cos(a)).toFixed(2)+' '+(C+r*Math.sin(a)).toFixed(2);
-  let a=-Math.PI/2,s='';
+  let a=-Math.PI/2,s='',labelY={left:-20,right:-20};
   segs.forEach(g=>{const fr=g.n/tot,b=a+fr*Math.PI*2,pk=o.pick&&!g.other,dim=o.sel!=null&&(g.other?!rest.some(e=>e[0]===o.sel):g.k!==o.sel);
     const at=' fill="'+g.c+'" opacity="'+(dim?.35:1)+'"'+(pk?' class="sl click" '+PA+'="'+esc(g.k)+'"':' class="sl"')+'><title>'+esc(g.k)+' '+fmt(g.n)+unit+' · '+(fr*100).toFixed(1)+'%</title>';
     if(fr>.9999)s+='<path fill-rule="evenodd" d="M'+C+' '+(C-RO)+'A'+RO+' '+RO+' 0 1 1 '+(C-.01)+' '+(C-RO)+'ZM'+C+' '+(C-RI)+'A'+RI+' '+RI+' 0 1 0 '+(C+.01)+' '+(C-RI)+'Z"'+at+'</path>';
     else{const lg=fr>.5?1:0;s+='<path d="M'+pt(RO,a)+'A'+RO+' '+RO+' 0 '+lg+' 1 '+pt(RO,b)+'L'+pt(RI,b)+'A'+RI+' '+RI+' 0 '+lg+' 0 '+pt(RI,a)+'Z" stroke="var(--card)" stroke-width="1.5"'+at+'</path>'}
-    if(o.segmentLabels&&g.n){const mid=(a+b)/2,r=(RO+RI)/2,xx=C+r*Math.cos(mid),yy=C+r*Math.sin(mid),size=fr<.1?8:11;s+='<text x="'+xx.toFixed(2)+'" y="'+yy.toFixed(2)+'" text-anchor="middle" dominant-baseline="middle" font-size="'+size+'" font-weight="800" fill="#fff" pointer-events="none">'+esc(g.k)+'</text>'}
+    if(o.segmentLabels&&g.n){
+      const mid=(a+b)/2,r=(RO+RI)/2,xx=C+r*Math.cos(mid),yy=C+r*Math.sin(mid);
+      const arc=2*Math.PI*r*fr,chars=Array.from(g.k).length,size=Math.min(11,(RO-RI-8),Math.max(0,arc-9)/Math.max(1,chars));
+      if(size>=6){
+        const angle=mid*180/Math.PI+90,rotation=angle>90&&angle<270?angle+180:angle;
+        s+='<text x="'+xx.toFixed(2)+'" y="'+yy.toFixed(2)+'" transform="rotate('+rotation.toFixed(2)+' '+xx.toFixed(2)+' '+yy.toFixed(2)+')" text-anchor="middle" dominant-baseline="middle" font-size="'+size.toFixed(2)+'" font-weight="800" fill="#fff" pointer-events="none">'+esc(g.k)+'</text>';
+      }else{
+        const side=Math.cos(mid)>=0?'right':'left',tx=side==='right'?184:-4,ty=Math.max(yy,labelY[side]+14);labelY[side]=ty;
+        s+='<path d="M'+pt(RO-2,mid)+'L'+(side==='right'?181:-1)+' '+ty.toFixed(2)+'" fill="none" stroke="'+g.c+'" stroke-width="1"/><text x="'+tx+'" y="'+ty.toFixed(2)+'" text-anchor="'+(side==='right'?'start':'end')+'" dominant-baseline="middle" font-size="9" fill="var(--text)">'+esc(g.k)+'</text>';
+      }
+    }
     a=b});
   s+='<text x="'+C+'" y="'+(C-2)+'" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text)">'+fmt(tot)+'</text><text x="'+C+'" y="'+(C+16)+'" text-anchor="middle" font-size="11" fill="var(--sub)">'+esc(o.center||('총 '+unit))+'</text>';
   const row=(k,n,c,pk)=>'<div class="lg-r'+(pk?' click'+(k===o.sel?' on':'')+'" '+PA+'="'+esc(k)+'" role="button" tabindex="0':'')+'"><i style="background:'+c+'"></i><span title="'+esc(k)+'">'+esc(k)+'</span><b>'+fmt(n)+unit+'</b><em>'+(n/tot*100).toFixed(1)+'%</em></div>';
   const lg=segs.filter(g=>!g.other).map(g=>row(g.k,g.n,g.c,o.pick)).join('')+(o.pick?rest.map(e=>row(e[0],e[1],'var(--sub)',true)).join(''):restN?row('기타 '+rest.length+'개',restN,'var(--sub)',false):'');
-  return'<div class="pie"><svg viewBox="0 0 180 180" role="img" aria-label="'+esc(o.label||'비중 원형그래프')+'">'+s+'</svg><div class="lg">'+lg+'</div></div>';
+  return'<div class="pie"><svg viewBox="'+(o.segmentLabels?'-55 -20 290 230':'0 0 180 180')+'" role="img" aria-label="'+esc(o.label||'비중 원형그래프')+'">'+s+'</svg><div class="lg">'+lg+'</div></div>';
 }
 
 
@@ -613,12 +623,10 @@ function periodClaims(){
 }
 
 const MODALS={
-  out(){const tot=months().reduce((t,x)=>t+(x.m.out||0),0);
-    if(CTX.mode==='week'){
-      const items=months().map(x=>{const end=minS(x.r.end,LAST),days=end>=x.r.start?Math.round((toD(end)-toD(x.r.start))/86400000)+1:0;return{lab:x.lab,sel:x.sel,v:days?(x.m.out||0)/days:0,na:!days,sub:days?days+'일 집계':''}});
-      return{t:'출고 추이',s:rangeLab(),h:sec('월별 일평균 출고 수량','월 출고 합계 ÷ 집계일까지의 달력 일수',bars(items,{subSize:8,f:v=>v.toLocaleString('ko-KR',{maximumFractionDigits:1})+'개',label:'월별 일평균 출고 수량'}))+'<p class="m-note">진행 중인 월은 '+md(LAST)+'까지의 누적 일수로 나눕니다. 출고가 없는 날도 포함합니다.</p>'};
-    }
-    return{t:'출고 추이',s:rangeLab(),h:sec('월별 출고 건수','누적 '+fmt(tot)+'건',bars(mser('out'),{label:'월별 출고 건수'}))}},
+  out(){const c=CTX.c,monthly=M.outView==='monthly';
+    const toggle='<div class="out-toolbar"><button type="button" class="pill click" data-out-view="'+(monthly?'share':'monthly')+'">'+(monthly?'출고 비중 보기':'월별 출고 건수 보기')+'</button></div>';
+    return{t:monthly?'출고 추이':'출고 비중',s:monthly?rangeLab():CTX.pl,h:toggle+(monthly?sec('월별 출고 건수','누적 '+fmt(months().reduce((t,x)=>t+(x.m.out||0),0))+'건',bars(mser('out'),{label:'월별 출고 건수'})):sec('해당 기간 출고 비중','총 '+fmt(c.out)+'건',pie([['자사몰',c.own],['쿠팡',c.cp],['교환',c.exch],['기타',c.other]],{segmentLabels:true,label:CTX.pl+' 출고 항목별 비중'})))}},
+
   inc(){const opts=[['inc','총사고'],['miss','누락'],['wrong','오배송'],['dmg','분실/파손']],tab=opts.some(x=>x[0]===M.tab)?M.tab:'inc',name=opts.find(x=>x[0]===tab)[1];
     return{t:'배송 사고 추이',s:rangeLab(),h:trendControls(opts,tab)+trendChart(name,x=>x.m[tab]||0,'var(--bad)')}},
   re(){return periodClaims()},
@@ -788,6 +796,7 @@ document.addEventListener('click',e=>{
     const sentiment=e.target.closest('[data-product-sentiment]');if(sentiment&&M){M.sentiment=sentiment.dataset.productSentiment;M.f='';M.showReviews=false;M.moreWords=false;drawM();return}
     const product=e.target.closest('[data-issue-product]');if(product&&M){M.product=product.dataset.issueProduct;M.analysis='';drawM();return}
     const analysis=e.target.closest('[data-analysis]');if(analysis&&M){M.analysis=M.analysis===analysis.dataset.analysis?'':analysis.dataset.analysis;drawM();return}
+    const outView=e.target.closest('[data-out-view]');if(outView&&M){M.outView=outView.dataset.outView;drawM();return}
     const view=e.target.closest('[data-view]');if(view&&M){M.view=view.dataset.view;drawM();return}
     const wc=e.target.closest('[data-week-claim]');if(wc&&M&&M.type==='re'){M.weekClaim=M.weekClaim===wc.dataset.weekClaim?'':wc.dataset.weekClaim;drawM();return}
     const rm=e.target.closest('[data-re-mode]');if(rm&&M){M.reMode=!M.reMode;M.reProduct='';drawM();return}
