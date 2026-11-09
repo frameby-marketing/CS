@@ -93,6 +93,9 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 .rv-p{font-size:12.5px;font-weight:700;margin-bottom:5px}
 .rv-t{font-size:12.5px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .rv-m{font-size:11px;color:var(--sub);margin-top:7px}
+.rv-reply{margin-top:12px;padding:12px 14px;border-radius:9px;background:var(--track);border:1px solid var(--line)}
+.rv-reply-label{font-size:11px;font-weight:750;color:var(--accent);margin-bottom:6px}
+.rv-reply-text{font-size:12.5px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
 /* 씨딩 */
 .funnel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 12px}
 .fs{background:var(--track);border-radius:10px;padding:10px 11px;position:relative;overflow:hidden}
@@ -279,8 +282,8 @@ async function fetchSource(s){
   for(const u of variants){try{return toTable(tableFromJson(await jsonp(u)),s.need)}catch(e){}}
   throw new Error(s.key);
 }
-const get=(t,r,k)=>{let i=t.idx[k];if(i===undefined)i=t.idx[k]=locate(t.h,k);return i>=0?norm(r[i]):''};
-const mapRows=(t,fn)=>t?t.rows.map(r=>fn(k=>get(t,r,k))).filter(Boolean):[];
+const get=(t,r,k,preserveLines=false)=>{let i=t.idx[k];if(i===undefined)i=t.idx[k]=locate(t.h,k);return i>=0?(preserveLines?String(r[i]??'').trim():norm(r[i])):''};
+const mapRows=(t,fn)=>t?t.rows.map(r=>fn((k,preserveLines)=>get(t,r,k,preserveLines))).filter(Boolean):[];
 function pdate(v){const m=String(v||'').match(/(\d{2,4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/);if(!m)return null;let y=+m[1];if(y<100)y+=2000;const mo=+m[2],d=+m[3];if(mo<1||mo>12||d<1||d>31)return null;return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
 
 /* ---------- 데이터 정리 ---------- */
@@ -296,7 +299,7 @@ function build(T){
   const inquiry=mapRows(T.inquiry,g=>{const d=pdate(g('문의일'));const text=g('문의 내용');if(!d||!text)return null;return{d,src:'문의',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:inquiryCategory(g('Category')||g('카테고리')),text}});
   const chat=mapRows(T.chat,g=>{const d=pdate(g('인입일'));const text=g('상담 내용 요약');if(!d||!text)return null;return{d,src:'채팅',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),cat:inquiryCategory(g('Category')||g('카테고리')),text}});
   const phone=mapRows(T.phone,g=>{const d=pdate(g('인입일'));if(!d)return null;return{d,src:'전화',ch:'전화',product:g('제품'),cat:inquiryCategory(g('카테고리')||g('Category')),text:g('상담 내용 요약'),stage:g('구매 단계'),claimId:g('사고/클레임 ID')}});
-  const review=mapRows(T.review,g=>{const d=pdate(g('리뷰 작성일'));const star=num(g('별점'));if(!d||!star)return null;return{d,src:'리뷰',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),star,sentiment:g('긍정/부정'),cat:g('Category')||'미분류',text:g('리뷰 내용'),memo:g('처리 메모'),imp:!!g('중요')}});
+  const review=mapRows(T.review,g=>{const d=pdate(g('리뷰 작성일'));const star=num(g('별점'));if(!d||!star)return null;return{d,src:'리뷰',ch:g('채널'),product:g('제품'),opt:g('기종·옵션'),star,sentiment:g('긍정/부정'),cat:g('Category')||'미분류',text:g('리뷰 내용'),reply:g('답글',true),memo:g('처리 메모'),imp:!!g('중요')}});
   const seeding=mapRows(T.seeding,g=>{const id=g('씨딩ID'),acc=g('계정');if(!/^S-/i.test(id)&&!/^@/.test(acc))return null;const st=g('상태');const posted=pdate(g('실제 게시일'));const ship=g('제품 발송 상태');return{id,camp:g('캠페인')||'캠페인 미기재',acc,fol:num(g('팔로워')),cat:g('카테고리'),recruit:g('섭외 상태'),confirmed:/완료/.test(g('섭외 상태')),cd:pdate(g('섭외 확정일')),sent:/발송/.test(ship)&&/완료/.test(ship)||!!pdate(g('발송일')),sd:pdate(g('발송일')),due:pdate(g('게시 약속일')),posted:posted||(/게시\s*완료/.test(st)?(pdate(g('발송일'))||''):null),pd:posted,url:g('게시 URL'),likes:num(g('좋아요')),cmts:num(g('댓글')),cost:num(g('원가'))*(num(g('수량'))||1)}});
   const social=T.social?T.social.rows.map((r,i)=>{const d=pdate(r[0]);if(!d)return null;const media=r.slice(4,14).map(safeMedia).filter(Boolean);return{id:i,d,cat:norm(r[1]),sub:norm(r[2]),text:String(r[3]||'').trim(),media}}).filter(Boolean):[];
   D={claims,claimsAvailable:!!T.claims,ordersAvailable:!!T.orders,daily,incidents,orders,inquiry,chat,phone,review,seeding,social,socialAvailable:!!T.social};
@@ -394,7 +397,7 @@ function highCats(rv){
   return cats.filter(o=>o.list.length).sort((a,b)=>b.list.length-a.list.length);
 }
 const stars=n=>'<span class="rv-star">'+'★'.repeat(Math.round(n))+'<span style="opacity:.25">'+'★'.repeat(Math.max(0,5-Math.round(n)))+'</span></span>';
-const rvCard=(x,tag,color,full)=>'<div class="rv'+(full?' full':'')+'" style="--c:'+color+'"><div class="rv-h"><span class="rv-tag">'+esc(tag)+'</span>'+(x.star?stars(x.star):'')+'<span class="rv-meta">'+md(x.d)+(x.src&&x.src!=='리뷰'?' · '+esc(x.src):'')+(x.ch?' · '+esc(x.ch):'')+'</span></div><div class="rv-p">'+esc(x.product||'제품 미기재')+(x.opt?' · '+esc(x.opt):'')+'</div><div class="rv-t"'+(full?'':' title="'+esc(x.text)+'"')+'>'+esc(x.text)+'</div>'+(x.memo?'<div class="rv-m">CX 메모 · '+esc(x.memo)+'</div>':'')+'</div>';
+const rvCard=(x,tag,color,full)=>'<div class="rv'+(full?' full':'')+'" style="--c:'+color+'"><div class="rv-h"><span class="rv-tag">'+esc(tag)+'</span>'+(x.star?stars(x.star):'')+'<span class="rv-meta">'+md(x.d)+(x.src&&x.src!=='리뷰'?' · '+esc(x.src):'')+(x.ch?' · '+esc(x.ch):'')+'</span></div><div class="rv-p">'+esc(x.product||'제품 미기재')+(x.opt?' · '+esc(x.opt):'')+'</div><div class="rv-t"'+(full?'':' title="'+esc(x.text)+'"')+'>'+esc(x.text)+'</div>'+(full&&x.reply?'<div class="rv-reply"><div class="rv-reply-label">CS 답글</div><div class="rv-reply-text">'+esc(x.reply)+'</div></div>':'')+(x.memo?'<div class="rv-m">CX 메모 · '+esc(x.memo)+'</div>':'')+'</div>';
 const igPath=u=>{const m=String(u||'').match(/instagram\.com\/(?:[^\/?#]+\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/);return m?(m[1]==='reels'?'reel':m[1])+'/'+m[2]:''};
 
 /* ---------- 차트 조각 (팝업용) ---------- */
