@@ -384,7 +384,7 @@ function delta(cur,prev,kind,good){
 }
 const kpi=(label,value,unit,d,subline,color,open)=>'<div class="kpi click" style="--c:'+color+'" data-open="'+open+'" role="button" tabindex="0" aria-label="'+esc(label)+' 상세 보기"><div class="k-l">'+esc(label)+'<span class="k-go">자세히 ›</span></div><div class="k-v">'+esc(value)+'<em>'+esc(unit)+'</em></div>'+d+'<div class="k-s'+(['out','voice'].includes(open)?' k-details':'')+'" title="'+esc(subline)+'">'+(['out','voice'].includes(open)?subline.split(' · ').map(x=>'<span>'+esc(x)+'</span>').join(''):esc(subline))+'</div></div>';
 const rk=(i,name,val,unit,width,sub,extra,attr)=>'<div class="rk'+(attr?' click" role="button" tabindex="0" '+attr:'"')+'><div class="rk-h"><span class="rk-no">'+(i+1)+'</span><span class="rk-nm" title="'+esc(name)+'">'+esc(name)+'</span><span class="rk-v">'+fmt(val)+'<small>'+unit+'</small>'+(extra||'')+'</span></div><div class="rk-bar"><i style="width:'+Math.max(4,width)+'%"></i></div>'+(sub?'<div class="rk-s'+(attr?' multi':'')+'">'+sub+'</div>':'')+'</div>';
-const panel=(cls,color,title,right,desc,body)=>'<section class="panel '+cls+'" style="--c:'+color+'"><div class="ph"><h3>'+title+'</h3><span>'+right+'</span></div><p class="pd">'+desc+'</p>'+body+'</section>';
+const panel=(cls,color,title,right,desc,body,action='')=>'<section class="panel '+cls+'"'+action+' style="--c:'+color+'"><div class="ph"><h3>'+title+'</h3><span>'+right+'</span></div><p class="pd">'+desc+'</p>'+body+'</section>';
 
 /* 주목할 리뷰 고르기 */
 const PRAISE=[[/세\s?번째|두\s?번째|재구매|또 ?샀|또 ?구매|하나 더|추가 ?구매|\d번째/,'재구매 고객','var(--teal)'],[/목|허리|자세|디스크|어깨|거북/,'구매 동기 · 자세','var(--accent)'],[/회사|직원|사무실|단체|대량/,'B2B 신호','var(--accent2)'],[/선물/,'선물 수요','var(--accent2)'],[/출시|만들어 ?주|있었으면|나왔으면|다시/,'제품 요청','var(--warn)']];
@@ -564,7 +564,7 @@ const mser=(k,extra)=>months().map(x=>Object.assign({lab:x.lab,sel:x.sel,v:x.m[k
 
 function trendControls(opts,tab){return '<div class="trend-controls">'+mtabs(opts,tab)+'<div class="seg"><button type="button" data-view="ratio" class="'+(M.view!=='count'?'active':'')+'">비율</button><button type="button" data-view="count" class="'+(M.view==='count'?'active':'')+'">수량</button></div></div>'}
 function trendChart(name,value,color){const count=M.view==='count',items=months().map(x=>({lab:x.lab,sel:x.sel,v:count?value(x):(x.m.out?value(x)/x.m.out:null)}));return sec('월별 '+name+(count?' 수량':' 비율'),count?'월 누적 건수':'월 총출고 대비 비율',count?bars(items,{color,zero:true,label:name+' 월별 수량'}):line(items,{color,label:name+' 월별 출고 대비 비율'}))}
-function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(reviewSentiment(x.sentiment)):x.product||'제품 미기재'));const entries=kind==='sentiment'?['긍정','부정','자동완성'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:kind!=='sentiment',pa:kind==='sentiment'?'sentiment-open':'review-product-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','자동완성':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 자동완성 비중':'제품별 리뷰 비중'})}
+function reviewBreakdown(rows,kind){const by={};rows.forEach(x=>inc1(by,kind==='sentiment'?(reviewSentiment(x.sentiment)):x.product||'제품 미기재'));const entries=kind==='sentiment'?['긍정','부정','자동완성'].filter(k=>by[k]).map(k=>[k,by[k]]):topN(by,999);return pie(entries,{pick:kind!=='sentiment',pa:'review-product-open',colors:kind==='sentiment'?{'긍정':'#4c8dff','부정':'#ff5c6c','자동완성':'#89919e'}:null,label:kind==='sentiment'?'리뷰 긍정 부정 자동완성 비중':'제품별 리뷰 비중'})}
 function groupedReviews(rows){const by={};rows.forEach(x=>(by[x.product||'제품 미기재']=by[x.product||'제품 미기재']||[]).push(x));return Object.entries(by).sort((a,b)=>b[1].length-a[1].length).map(([name,list])=>sec(esc(name),'총 '+list.length+'건','<div class="rvlist" style="max-height:none">'+list.sort((a,b)=>b.d.localeCompare(a.d)).map(x=>rvCard(x,x.cat||'미분류','var(--accent)',true)).join('')+'</div>')).join('')||EMPTY('해당 리뷰가 없습니다.')}
 const REVIEW_KEYWORDS=[
  ['업무 효율',/업무.{0,15}(효율|편|생산)|효율|생산성/],['휴대용',/휴대|가지고 다니|들고 다니|갖고 다니/],['착붙는 자력',/착붙|착 붙|자력.{0,10}(강|좋|쎄)|자석.{0,10}(강|좋|쎄)/],['노트북·아이패드 동시 거치',/(노트북|맥북)[\s\S]*(아이패드|태블릿|테블릿)[\s\S]*(동시|함께|같이)|동시.{0,15}(거치|사용)|듀얼/],
@@ -645,8 +645,20 @@ const MODALS={
   issue(){const t=M.arg,ents=topN(CTX.prod[t]||{},999),product=CTX.prod[t]&&CTX.prod[t][M.product]?M.product:'',rows=product?CTX.c.asks.filter(x=>(x.cat||'미분류')===t&&(x.product||'제품 미기재')===product):[];
     return{t:'고객 이슈 · '+t,s:CTX.pl+' · '+fmt(CTX.tally[t]||0)+'건',h:sec('제품별 비중','제품을 누르면 기종·문의 내용 분석을 확인합니다.',pie(ents,{pick:true,pa:'issue-product',sel:product||null,label:t+' 제품별 비중'}))+(product?sec(esc(product),'해당 카테고리 접수 기준',issueAnalysis(rows,t)):'<p class="m-note">위 그래프 또는 제품명을 선택해 주세요.</p>')}},
   prod(){const k=M.arg,name=CTX.names[k]||k,o=Object.assign({},CTX.oo[k]||{}),tot=CTX.og[k]||0,known=Object.values(o).reduce((a,b)=>a+b,0);if(tot>known)o['옵션 미기재']=tot-known;return{t:name,s:CTX.pl,h:sec('옵션별 판매 비중','출고 수량 '+fmt(tot)+'개',pie(topN(o,999),{unit:'개',label:name+' 옵션별 판매 비중'}))}},
-  sentiment(){const name=M.arg,rows=CTX.c.rv.filter(x=>(reviewSentiment(x.sentiment))===name),by={};rows.forEach(x=>inc1(by,x.cat||'미분류'));const entries=topN(by,999),f=by[M.f]?M.f:(entries[0]?entries[0][0]:''),list=rows.filter(x=>(x.cat||'미분류')===f),button=(key,n)=>'<button type="button" class="pill click'+(key===f?' on':'')+'" data-f="'+esc(key)+'">'+esc(key)+' '+n+'건</button>';
-    return{t:name+' 리뷰',s:CTX.pl+' · 총 '+rows.length+'건',h:sec('카테고리별 비중','리뷰가 가장 많은 카테고리를 기본으로 표시합니다.',pie(entries,{pick:true,pa:'f',sel:f||null,label:name+' 리뷰 카테고리 비중'}))+sec(f?esc(f)+' 리뷰':'리뷰',list.length+'건','<div class="chips">'+entries.map(([k,n])=>button(k,n)).join('')+'</div>'+reviewSummary(list))}},
+  sentiment(){
+    const buckets={positive:[],negative:[]};
+    CTX.c.rv.forEach(x=>{
+      const sentiment=reviewSentiment(x.sentiment);
+      if(sentiment==='긍정')buckets.positive.push(x);
+      if(sentiment==='부정')buckets.negative.push(x);
+    });
+    const tab=M.tab==='negative'?'negative':'positive';
+    const tabs=mtabs([
+      ['positive','긍정 '+fmt(buckets.positive.length)+'건'],
+      ['negative','부정 '+fmt(buckets.negative.length)+'건']
+    ],tab);
+    return{t:'고객의 목소리 · 리뷰',s:CTX.pl,h:tabs+groupedReviews(buckets[tab])};
+  },
   reviewProduct(){const name=M.arg,rows=CTX.c.rv.filter(x=>(x.product||'제품 미기재')===name),by={};rows.forEach(x=>inc1(by,reviewSentiment(x.sentiment)));const entries=['긍정','부정','자동완성'].filter(k=>by[k]).map(k=>[k,by[k]]),sel=by[M.sentiment]?M.sentiment:(entries[0]?entries[0][0]:''),selected=rows.filter(x=>(reviewSentiment(x.sentiment))===sel),cats={};selected.forEach(x=>inc1(cats,x.cat||'미분류'));const categories=topN(cats,999),category=cats[M.f]?M.f:(categories[0]?categories[0][0]:''),list=selected.filter(x=>(x.cat||'미분류')===category);
     return{t:'제품별 리뷰 · '+name,s:CTX.pl+' · 총 '+rows.length+'건',h:sec('긍정 · 부정 · 자동완성 비중','그래프에서 긍정·부정·자동완성을 선택하면 아래 카테고리가 바뀝니다.',pie(entries,{pick:true,pa:'product-sentiment',sel:sel||null,colors:{'긍정':'#4c8dff','부정':'#ff5c6c','자동완성':'#89919e'},label:name+' 리뷰 긍정 부정 자동완성 비중'}))+sec(esc(sel||'리뷰')+' · 카테고리별 건수',selected.length+'건','<div class="chips">'+categories.map(([k,n])=>'<button type="button" class="pill click'+(k===category?' on':'')+'" data-f="'+esc(k)+'">'+esc(k)+' '+n+'건</button>').join('')+'</div>'+reviewSummary(list))}},
   praise(){const o=CTX.highs.find(q=>q.n===M.arg);if(!o)return{t:'높은 별점 리뷰',s:CTX.pl,h:EMPTY('해당 리뷰가 없습니다.')};
@@ -753,7 +765,7 @@ function render(){
    +panel('hero','var(--accent)','많이 나간 제품 TOP 5',fmt(otot)+'개','주문 원장 출고 수량 · 옵션 합산',sales)
    +'</div>'
    +'<div class="sec"><h2>고객의 목소리</h2><span>선택 기간 리뷰 · 시트 J열 긍정/부정/자동완성 · K열 카테고리</span></div>'
-   +'<div class="row two">'+panel('','var(--accent)','리뷰 긍정 · 부정 · 자동완성','총 '+c.rv.length+'건','전체 리뷰 중 긍정·부정·자동완성 비중입니다. 시트 J열 기준이며, 기존 미분류 및 미기재 항목은 자동완성으로 표시합니다.',reviewBreakdown(c.rv,'sentiment'))
+   +'<div class="row two">'+panel('click','var(--accent)','리뷰 긍정 · 부정 · 자동완성','총 '+c.rv.length+'건','전체 리뷰 중 긍정·부정·자동완성 비중입니다. 시트 J열 기준이며, 기존 미분류 및 미기재 항목은 자동완성으로 표시합니다. 카드를 누르면 긍정·부정 리뷰를 볼 수 있습니다.',reviewBreakdown(c.rv,'sentiment'),' data-open="sentiment" role="button" tabindex="0" aria-haspopup="dialog" aria-label="긍정·부정 리뷰 보기"')
    +panel('','var(--teal)','제품별 리뷰','총 '+c.rv.length+'건','제품을 누르면 해당 제품의 긍정·부정·자동완성 비율과 리뷰를 확인합니다.',reviewBreakdown(c.rv,'product'))+'</div>'
    +'<div class="sec"><h2>운영 · 마케팅 현황</h2></div>'
    +'<div class="row">'+panel('','var(--teal)','SNS 씨딩','시트 기록 기준','섭외부터 게시까지 진행 상황입니다. 좋아요·댓글은 시트 입력값이며, 계정을 누르면 실제 게시물을 확인합니다.',seedHtml)+'</div>'+socialSection();
@@ -805,14 +817,13 @@ document.addEventListener('click',e=>{
     const rm=e.target.closest('[data-re-mode]');if(rm&&M){M.reMode=!M.reMode;M.reProduct='';drawM();return}
     const rr=e.target.closest('[data-re-rate]');if(rr&&M){M.reRate=rr.dataset.reRate;drawM();return}
     const rp=e.target.closest('[data-re-product]');if(rp&&M){M.reProduct=rp.dataset.reProduct;drawM();return}
-    const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();return}
+    const tb=e.target.closest('[data-tab]');if(tb&&M){M.tab=tb.dataset.tab;drawM();if(M.type==='sentiment')mdl.querySelector('[data-tab].active').focus();return}
     if(e.target.closest('[data-keyword-more]')&&M){M.moreWords=true;drawM();return}
     if(e.target.closest('[data-review-toggle]')&&M){M.showReviews=!M.showReviews;drawM();return}
-    const fl=e.target.closest('[data-f]');if(fl&&M){M.f=(M.type==='sentiment'||M.type==='reviewProduct')?fl.dataset.f:(M.f===fl.dataset.f?'':fl.dataset.f);M.showReviews=false;M.moreWords=false;drawM();return}
+    const fl=e.target.closest('[data-f]');if(fl&&M){M.f=(M.type==='reviewProduct')?fl.dataset.f:(M.f===fl.dataset.f?'':fl.dataset.f);M.showReviews=false;M.moreWords=false;drawM();return}
     const pk=e.target.closest('[data-pick]');if(pk&&M){M.arg=pk.dataset.pick;drawM()}
     return;
   }
-  const sentimentOpen=e.target.closest('[data-sentiment-open]');if(sentimentOpen){openM('sentiment',sentimentOpen.dataset.sentimentOpen);return}
   const productOpen=e.target.closest('[data-review-product-open]');if(productOpen){openM('reviewProduct',productOpen.dataset.reviewProductOpen);return}
   const campaign=e.target.closest('[data-campaign]');if(campaign){selectedCamp=campaign.dataset.campaign;render();return}
   const sm=e.target.closest('[data-social-mode]');if(sm){socialMode=sm.dataset.socialMode;render();return}
@@ -824,7 +835,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&M){closeM();return}
-  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-open],[role="button"][data-pick],[role="button"][data-f],[role="button"][data-sentiment-open],[role="button"][data-review-product-open],[role="button"][data-issue-product],[role="button"][data-product-sentiment]')){e.preventDefault();e.target.click()}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-open],[role="button"][data-pick],[role="button"][data-f],[role="button"][data-review-product-open],[role="button"][data-issue-product],[role="button"][data-product-sentiment]')){e.preventDefault();e.target.click()}
 });
 
 setInterval(()=>{if(!document.hidden)load()},10*60*1000);
